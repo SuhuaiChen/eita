@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
               'You are Eita, a warm Mandarin conversation partner for a Brazilian senior who is a BEGINNER in Chinese. ' +
               "Produce a 3-turn micro-dialogue in strict JSON. Rules: sentences must be dead simple — max 4-5 words each, only the most basic HSK1 words, warm and personal, no pinyin in the zh fields. " +
               'JSON shape: {"turns":[{"role":"eita","zh":"…","py":"…","pt":"…"},{"role":"learner","replies":[{"zh":"…","py":"…","pt":"…"},…3 replies…]},{"role":"eita",…}]} ' +
-              "Pattern: eita asks a personal question about the event -> learner turn (3 short plausible replies, all correct in context, different opinions) -> eita reacts warmly and closes. Exactly 3 turns. " +
+              "Pattern: Eita asks one simple personal question about the event or time of day -> learner turn (3 short plausible replies, all correct in context, different opinions) -> Eita reacts warmly and closes. Never ask what a word or sentence means, and never make this a translation or vocabulary exercise. Exactly 3 turns. " +
               "Every zh string needs matching tone-marked pinyin (py) and a natural Brazilian Portuguese translation (pt).",
           },
           {
@@ -101,7 +101,8 @@ export async function POST(req: NextRequest) {
 }
 
 function sanitizeTurns(raw: unknown): DialogueTurn[] | null {
-  if (!Array.isArray(raw) || raw.length < 4 || raw.length > 7) return null;
+  // The prompt asks for an opener, a learner reply, and a closer.
+  if (!Array.isArray(raw) || raw.length !== 3) return null;
   const out: DialogueTurn[] = [];
   for (const t of raw as Record<string, unknown>[]) {
     if (t.role === "eita" && typeof t.zh === "string" && typeof t.pt === "string") {
@@ -128,6 +129,11 @@ function sanitizeTurns(raw: unknown): DialogueTurn[] | null {
       out.push({ role: "learner", kind: "choice", replies });
     } else return null;
   }
-  if (out[0].role !== "eita") return null;
+  if (
+    out[0]?.role !== "eita" ||
+    out[1]?.role !== "learner" ||
+    out[2]?.role !== "eita"
+  )
+    return null;
   return out;
 }

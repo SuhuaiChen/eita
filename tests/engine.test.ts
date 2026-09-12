@@ -73,15 +73,15 @@ describe("engine", () => {
     });
   }
 
-  it("prefers scripted dialogues for the current moment", () => {
+  it("uses a time-aware conversation for the current moment", () => {
     const s = initState(mkProfile("hsk1"));
-    let scripted = 0;
+    let conversations = 0;
     for (let i = 0; i < 12; i++) {
       const p = pickPractice(s, "cafe")!;
-      if (!p.dialogue.id.startsWith("gen:")) scripted++;
+      if (p.dialogue.id.startsWith("chat:cafe:")) conversations++;
       applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
     }
-    expect(scripted).toBeGreaterThan(0);
+    expect(conversations).toBe(12);
   });
 
   it("introduces new concepts when nothing is due", () => {
@@ -104,9 +104,9 @@ describe("engine", () => {
     expect(s.confidencePressure).toBeGreaterThanOrEqual(0.5);
     const p = pickPractice(s, "almoco")!;
     expect(p.recovery).toBe(true);
-    // recovery = an easy meaning check inside the chat
+    // Recovery stays conversational; it never switches to a meaning quiz.
     expect(
-      p.dialogue.turns.some((t) => t.role === "learner" && t.kind === "check")
+      p.dialogue.turns.some((t) => t.role === "learner" && t.kind === "choice")
     ).toBe(true);
   });
 

@@ -18,7 +18,6 @@ import type {
   MomentId,
   Profile,
   ReplyOption,
-  SentenceRef,
   TopicId,
   VocabItem,
 } from "./types";
@@ -325,9 +324,6 @@ export function glossesFor(words: string[]): { w: string; p: string; pt: string 
 
 // ---------- generic dialogue construction --------------------------------------
 
-const shuffled = <T,>(arr: T[]): T[] =>
-  [...arr].sort(() => Math.random() - 0.5);
-
 const P = (zh: string, py: string, pt: string): DialogueTurn => ({
   role: "eita", zh, py, pt, words: segment(zh),
 });
@@ -340,61 +336,9 @@ const R = (zh: string, py: string, pt: string, extra?: Partial<ReplyOption>): Re
   zh, py, pt, words: segment(zh), ...extra,
 });
 
-function vocabDistractors(target: VocabItem, state: LearnerState, n = 3): VocabItem[] {
-  const pool = curriculum.vocab.filter(
-    (v) => v.id !== target.id && v.pt !== target.pt && !/^[a-z]+$/i.test(v.w)
-  );
-  const samePos = pool.filter((v) => v.pos === target.pos);
-  const familiar = samePos.filter((v) => conceptOf(state, v.id).intro);
-  const rest = samePos.filter((v) => !familiar.includes(v));
-  return [...shuffled(familiar), ...shuffled(rest), ...shuffled(pool)].slice(0, n);
-}
-
-function checkReplies(target: VocabItem, state: LearnerState): ReplyOption[] {
-  const correct: ReplyOption = {
-    zh: target.w, py: target.p, pt: target.pt, words: [target.w], ok: true,
-  };
-  const wrong = vocabDistractors(target, state, 3).map((d) => ({
-    zh: d.w, py: d.p, pt: d.pt, words: [d.w],
-  }));
-  return shuffled([correct, ...wrong]);
-}
-
-const CLOSERS: Record<MomentId, [string, string, string][]> = {
-  cafe: [["明天早上见！", "míngtiān zǎoshang jiàn!", "Até amanhã de manhã!"]],
-  almoco: [["慢慢吃！", "mànmàn chī!", "Bom apetite!"]],
-  tarde: [["明天见！", "míngtiān jiàn!", "Até amanhã!"]],
-  noite: [["晚安！", "wǎn'ān!", "Boa noite!"]],
-};
-
-const CLOSER_PT = (m: MomentId) => CLOSERS[m][0];
-
-/** sentences from the curriculum that contain this word, best-scaffold first */
-function sentencesWith(state: LearnerState, w: string, moment: MomentId, now: number): SentenceRef[] {
-  const out: SentenceRef[] = [];
-  for (const s of curriculum.momentSentences)
-    if (s.words.includes(w)) out.push(s);
-  for (const n of curriculum.nodes) {
-    for (const it of n.items) {
-      if (it.t === "match")
-        it.pairs.forEach((p, i) => {
-          if (it.words[i].includes(w))
-            out.push({ hz: p[0], pt: p[1], py: p[2], words: it.words[i] });
-        });
-      if (it.t === "order" && it.words.includes(w))
-        out.push({ hz: it.hz, pt: it.pt, py: it.py.join(" "), words: it.words });
-    }
-  }
-  return out
-    .map((s) => ({ s, sc: scaffoldScore(state, s.words, new Set([w]), now) }))
-    .sort((a, b) => b.sc - a.sc)
-    .map((x) => x.s);
-}
-
 /**
- * Recovery / new-word / unscripted-concept dialogue.
- * Demo shape: exactly 3 turns — Eita asks/shares → learner answers →
- * Eita confirms and closes warmly. Works for any concept.
+ * A local conversation fallback. The selected concept is still recorded by the
+ * adaptive engine, but the learner never has to answer a translation quiz.
  */
 function genericDialogue(
   state: LearnerState,
@@ -403,72 +347,52 @@ function genericDialogue(
   now: number,
   opts: { intro?: boolean; recovery?: boolean }
 ): Dialogue | null {
-  const closer = CLOSER_PT(moment);
-
-  if (!isGrammar(target)) {
-    const v = vocabById.get(target)!;
-    const sent = sentencesWith(state, v.w, moment, now)[0];
-    const verb = v.pos === "verbo";
-    let ask: DialogueTurn;
-    let reply: DialogueTurn;
-
-    if (opts.intro) {
-      // meet the word inside the conversation
-      ask = P(
-        `Palavra nova pra você: ${v.w}`,
-        v.p,
-        `${v.w} (${v.p}) significa "${v.pt}".`
-      );
-      reply = L(checkReplies(v, state), "check", `${v.w} significa…`);
-    } else if (verb && sent && !opts.recovery) {
-      ask = P(`你想${v.w}吗？`, `nǐ xiǎng ${v.p} ma?`, `Você quer ${v.pt}?`);
-      reply = L([
-        R(`我想${v.w}。`, `wǒ xiǎng ${v.p}.`, `Eu quero ${v.pt}.`),
-        R(`我不想${v.w}。`, `wǒ bù xiǎng ${v.p}.`, `Eu não quero ${v.pt}.`),
-        R("我不知道。", "wǒ bù zhīdào.", "Eu não sei."),
-      ]);
-    } else if (sent) {
-      ask = P(sent.hz, sent.py, sent.pt);
-      reply = L(checkReplies(v, state), "check", `${v.w} significa…`);
-    } else {
-      ask = P(`你认识这个词吗？${v.w}`, `nǐ rènshi zhège cí ma? ${v.w}`, `Você conhece esta palavra? ${v.w}`);
-      reply = L(checkReplies(v, state), "check", `${v.w} significa…`);
-    }
-
-    // confirm + close folded into one warm line
-    const close = P(
-      `太好了！${closer[0]}`,
-      `tài hǎo le! ${closer[1]}`,
-      `Isso — ${v.w} é "${v.pt}". ${closer[2]}`
-    );
-    return {
-      id: `gen:${target}:${opts.recovery ? "rec" : opts.intro ? "new" : "std"}`,
-      moment,
-      targets: [target],
-      topics: v.topics,
-      turns: [ask, reply, close],
-    };
-  }
-
-  // grammar target: "listen & understand" micro-dialogue — hear it, get it, done
-  const node = nodeById.get(target)!;
-  const sent = pickNodeSentence(state, node, now);
-  if (!sent) return null;
-  const v = vocabById.get(`v:${node.label}`);
-  const reply = v
-    ? L(checkReplies(v, state), "check", `${node.label} significa…`)
-    : L(meaningOptions(state, sent), "check", "O que essa frase quer dizer?");
-  const close = P(
-    closer[0],
-    closer[1],
-    `${node.label} = ${node.pt}.${node.ptpat ? " " + node.ptpat : ""} ${closer[2]}`
-  );
+  const item = vocabById.get(target) ?? nodeById.get(target);
+  if (!item) return null;
+  const turnsByMoment: Record<MomentId, DialogueTurn[]> = {
+    cafe: [
+      P("早上好！你喝什么？", "zǎoshang hǎo! nǐ hē shénme?", "Bom dia! O que você bebe?"),
+      L([
+        R("我喝茶。", "wǒ hē chá.", "Eu bebo chá."),
+        R("我喝咖啡。", "wǒ hē kāfēi.", "Eu bebo café."),
+        R("我喝水。", "wǒ hē shuǐ.", "Eu bebo água."),
+      ]),
+      P("很好！今天开心！", "hěn hǎo! jīntiān kāixīn!", "Que bom! Tenha um dia feliz!"),
+    ],
+    almoco: [
+      P("中午好！你吃饭了吗？", "zhōngwǔ hǎo! nǐ chī fàn le ma?", "Boa tarde! Você já almoçou?"),
+      L([
+        R("我吃饭了。", "wǒ chī fàn le.", "Já almocei."),
+        R("我还没吃。", "wǒ hái méi chī.", "Ainda não comi."),
+        R("我想吃面条。", "wǒ xiǎng chī miàntiáo.", "Quero comer macarrão."),
+      ]),
+      P("好啊！慢慢吃！", "hǎo a! mànmàn chī!", "Que bom! Bom apetite!"),
+    ],
+    tarde: [
+      P("下午好！你想做什么？", "xiàwǔ hǎo! nǐ xiǎng zuò shénme?", "Boa tarde! O que você quer fazer?"),
+      L([
+        R("我想看电视。", "wǒ xiǎng kàn diànshì.", "Quero ver televisão."),
+        R("我想听音乐。", "wǒ xiǎng tīng yīnyuè.", "Quero ouvir música."),
+        R("我想回家。", "wǒ xiǎng huí jiā.", "Quero ir para casa."),
+      ]),
+      P("听起来很好！", "tīng qǐlái hěn hǎo!", "Parece muito bom!"),
+    ],
+    noite: [
+      P("晚上好！你今天怎么样？", "wǎnshang hǎo! nǐ jīntiān zěnmeyàng?", "Boa noite! Como foi seu dia?"),
+      L([
+        R("我很好。", "wǒ hěn hǎo.", "Estou bem."),
+        R("我有一点累。", "wǒ yǒu yìdiǎn lèi.", "Estou um pouco cansado(a)."),
+        R("我很开心。", "wǒ hěn kāixīn.", "Estou muito feliz."),
+      ]),
+      P("谢谢你！晚安！", "xièxie nǐ! wǎn'ān!", "Obrigada por conversar! Boa noite!"),
+    ],
+  };
   return {
-    id: `gen:${target}`,
+    id: `chat:${moment}:${target}:${opts.recovery ? "rec" : opts.intro ? "new" : "std"}`,
     moment,
     targets: [target],
-    topics: node.topics,
-    turns: [P(sent.hz, sent.py, sent.pt), reply, close],
+    topics: item.topics,
+    turns: turnsByMoment[moment],
   };
 }
 
@@ -481,47 +405,6 @@ function shorten(d: Dialogue): Dialogue {
   const last = t[t.length - 1];
   const turns = last === t[li] ? [t[0], t[li]] : [t[0], t[li], last];
   return { ...d, turns };
-}
-
-function pickNodeSentence(state: LearnerState, node: GrammarNode, now: number): SentenceRef | null {
-  const cands: SentenceRef[] = [];
-  for (const it of node.items) {
-    if (it.t === "match")
-      it.pairs.forEach((p, i) =>
-        cands.push({ hz: p[0], pt: p[1], py: p[2], words: it.words[i] })
-      );
-    if (it.t === "order")
-      cands.push({ hz: it.hz, pt: it.pt, py: it.py.join(" "), words: it.words });
-  }
-  const targetWords = new Set(node.label.split(/[/.·]/));
-  const questions = cands.filter((c) => c.hz.includes("？"));
-  const pool = questions.length ? questions : cands;
-  return (
-    pool
-      .map((s) => ({ s, sc: scaffoldScore(state, s.words, targetWords, now) }))
-      .sort((a, b) => b.sc - a.sc)[0]?.s ?? null
-  );
-}
-
-/** meaning-check options built from other sentences' PT translations */
-function meaningOptions(state: LearnerState, sent: SentenceRef): ReplyOption[] {
-  const pool = [
-    ...curriculum.momentSentences,
-    ...curriculum.nodes.flatMap((n) =>
-      n.items.flatMap((it) =>
-        it.t === "match"
-          ? it.pairs.map((p, i) => ({ hz: p[0], pt: p[1], py: p[2], words: it.words[i] }))
-          : []
-      )
-    ),
-  ].filter((s) => s.hz !== sent.hz && s.pt !== sent.pt && s.pt.length > 6);
-  const ds = shuffled(
-    pool.filter((s) => Math.abs(s.pt.length - sent.pt.length) < 40)
-  ).slice(0, 3);
-  return shuffled([
-    { zh: sent.hz, py: sent.py, pt: sent.pt, words: sent.words, ok: true },
-    ...ds.map((s) => ({ zh: s.hz, py: s.py, pt: s.pt, words: s.words })),
-  ]);
 }
 
 // ---------- scripted dialogue selection --------------------------------------
@@ -657,6 +540,8 @@ export function pickEventPractice(
   if (dialogue && target && !scriptMatches(dialogue, target)) {
     target = dialogue.targets[0];
   }
+  // Agenda practice should always feel like a small exchange, not a worksheet.
+  dialogue = null;
   if (!dialogue) {
     target ??= pickDueList(state, ev.moment, now, 5)[0]?.id ?? null;
     target ??= pickNewConcept(state, ev.moment);
@@ -745,6 +630,9 @@ export function pickPractice(
   }
   if (!target) return null;
 
+  // Curriculum dialogue data also contains meaning checks. Keep its adaptive
+  // target selection, but present the learner with a time-of-day conversation.
+  dialogue = null;
   dialogue ??= genericDialogue(state, target, moment, now, {
     intro: isNew,
     recovery,

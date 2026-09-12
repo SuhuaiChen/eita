@@ -1,11 +1,8 @@
-// zh-CN text-to-speech.
-// Primary: Ali DashScope qwen-tts via /api/tts (natural neural voice, key
-// stays server-side). Fallback: Web Speech API zh-CN voice.
-// `slow` always uses the Web Speech API (rate control).
+// zh-CN text-to-speech using the device's system voice.
+// Keeping speech in the browser makes playback immediate and works without a
+// server key or a network round-trip.
 
 let zhVoice: SpeechSynthesisVoice | null | undefined;
-let audio: HTMLAudioElement | null = null;
-let apiBroken = false; // remember failures inside a session → skip the hop
 
 function pickVoice(): SpeechSynthesisVoice | null {
   if (typeof speechSynthesis === "undefined") return null;
@@ -38,51 +35,12 @@ function nativeSpeak(text: string, slow: boolean) {
   speechSynthesis.speak(u);
 }
 
-const urlCache = new Map<string, string>();
-
-let lastText = "";
-
 export function speak(text: string, opts: { slow?: boolean } = {}) {
   if (!text) return;
-  lastText = text;
   stopSpeak();
-  if (opts.slow || apiBroken || typeof fetch === "undefined") {
-    nativeSpeak(text, !!opts.slow);
-    return;
-  }
-  const cached = urlCache.get(text);
-  if (cached) {
-    play(cached);
-    return;
-  }
-  fetch("/api/tts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
-  })
-    .then((r) => (r.ok ? r.json() : Promise.reject()))
-    .then((d: { url?: string }) => {
-      if (!d.url) throw new Error("no url");
-      urlCache.set(text, d.url);
-      play(d.url);
-    })
-    .catch(() => {
-      apiBroken = true;
-      nativeSpeak(text, false);
-    });
-}
-
-function play(url: string) {
-  try {
-    audio = new Audio(url);
-    audio.play().catch(() => nativeSpeak(lastText, false));
-  } catch {
-    nativeSpeak(lastText, false);
-  }
+  nativeSpeak(text, !!opts.slow);
 }
 
 export function stopSpeak() {
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
-  audio?.pause();
-  audio = null;
 }
