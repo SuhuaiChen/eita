@@ -1,0 +1,133 @@
+import { NextRequest, NextResponse } from "next/server";
+import { segment } from "@/lib/engine";
+import type { Dialogue, DialogueTurn, MomentId } from "@/lib/types";
+
+// Generates a personalized micro-dialogue via OpenAI (gpt-5-mini by default).
+// The client falls back to the scripted/generated dialogues on any failure.
+export async function POST(req: NextRequest) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return NextResponse.json({ error: "no key" }, { status: 503 });
+
+  const body = (await req.json().catch(() => ({}))) as {
+    moment?: MomentId;
+    momentLabel?: string;
+    eventTitle?: string;
+    eventWhen?: string;
+    targetWord?: string;
+    targetPt?: string;
+    knownWords?: string[];
+    interests?: string[];
+    learnerName?: string;
+  };
+  const {
+    moment = "tarde",
+    momentLabel = "tarde livre",
+    eventTitle,
+    eventWhen,
+    targetWord,
+    targetPt,
+    knownWords = [],
+    learnerName,
+  } = body;
+
+  const eventLine = eventTitle
+    ? `The learner has this on their agenda soon: "${eventTitle}"${eventWhen ? ` at ${eventWhen}` : ""}. The FIRST Eita line must naturally reference this plan (in simple Mandarin, with PT translation).`
+    : `Anchor the chat to the daily moment "${momentLabel}".`;
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25_000);
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
+        reasoning_effort: "minimal",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              'You are Eita, a warm Mandarin conversation partner for a Brazilian senior who is a BEGINNER in Chinese. ' +
+              "Produce a 3-turn micro-dialogue in strict JSON. Rules: sentences must be dead simple — max 4-5 words each, only the most basic HSK1 words, warm and personal, no pinyin in the zh fields. " +
+              'JSON shape: {"turns":[{"role":"eita","zh":"…","py":"…","pt":"…"},{"role":"learner","replies":[{"zh":"…","py":"…","pt":"…"},…3 replies…]},{"role":"eita",…}]} ' +
+              "Pattern: eita asks a personal question about the event -> learner turn (3 short plausible replies, all correct in context, different opinions) -> eita reacts warmly and closes. Exactly 3 turns. " +
+              "Every zh string needs matching tone-marked pinyin (py) and a natural Brazilian Portuguese translation (pt).",
+          },
+          {
+            role: "user",
+            content:
+              `${eventLine}\n` +
+              (learnerName ? `Learner name: ${learnerName}.\n` : "") +
+              (targetWord
+                ? `Work the word ${targetWord} (${targetPt ?? ""}) into the dialogue naturally.\n`
+                : "") +
+              (knownWords.length
+                ? `Prefer these known words: ${knownWords.slice(0, 40).join(" ")}.\n`
+                : "") +
+              "Return only the JSON.",
+          },
+        ],
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok)
+      return NextResponse.json(
+        { error: data?.error?.message ?? `openai ${res.status}` },
+        { status: 502 }
+      );
+
+    const raw = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}");
+    const turns = sanitizeTurns(raw?.turns);
+    if (!turns) return NextResponse.json({ error: "bad shape" }, { status: 502 });
+
+    const dialogue: Dialogue = {
+      id: `ai:${eventTitle ? "ev" : "m"}:${Date.now()}`,
+      moment,
+      targets: targetWord ? [`v:${targetWord}`] : [],
+      topics: [],
+      turns,
+    };
+    return NextResponse.json(dialogue);
+  } catch {
+    return NextResponse.json({ error: "timeout" }, { status: 502 });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function sanitizeTurns(raw: unknown): DialogueTurn[] | null {
+  if (!Array.isArray(raw) || raw.length < 4 || raw.length > 7) return null;
+  const out: DialogueTurn[] = [];
+  for (const t of raw as Record<string, unknown>[]) {
+    if (t.role === "eita" && typeof t.zh === "string" && typeof t.pt === "string") {
+      out.push({
+        role: "eita",
+        zh: t.zh,
+        py: typeof t.py === "string" ? t.py : "",
+        pt: t.pt,
+        words: segment(t.zh),
+      });
+    } else if (t.role === "learner" && Array.isArray(t.replies)) {
+      const replies = (t.replies as Record<string, unknown>[])
+        .filter(
+          (r) => typeof r.zh === "string" && typeof r.pt === "string" && r.zh
+        )
+        .slice(0, 3)
+        .map((r) => ({
+          zh: r.zh as string,
+          py: typeof r.py === "string" ? (r.py as string) : "",
+          pt: r.pt as string,
+          words: segment(r.zh as string),
+        }));
+      if (replies.length < 2) return null;
+      out.push({ role: "learner", kind: "choice", replies });
+    } else return null;
+  }
+  if (out[0].role !== "eita") return null;
+  return out;
+}

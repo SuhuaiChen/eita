@@ -1,0 +1,530 @@
+{
+  "segmentWords": [
+    "陈天中",
+    "白家月",
+    "家月",
+    "安妮",
+    "李文",
+    "北京",
+    "上海",
+    "黄河",
+    "春节",
+    "干干净净",
+    "高高兴兴",
+    "漂漂亮亮",
+    "大大",
+    "慢慢",
+    "个个",
+    "张张",
+    "唱歌",
+    "下雪",
+    "下课",
+    "每天",
+    "越来越",
+    "来说",
+    "有点儿",
+    "点儿",
+    "看起来",
+    "看上去",
+    "情况",
+    "想法",
+    "会议室",
+    "咖啡店",
+    "作业本",
+    "熊猫",
+    "烤鸭",
+    "真正"
+  ],
+  "segmentSplit": {
+    "不比你好": ["不", "比", "你", "好"],
+    "一下课": ["一", "下课"]
+  },
+  "dropContrast": [
+    [
+      "1:3.3",
+      "2:1.1"
+    ],
+    [
+      "1:5.3",
+      "1:8.3"
+    ],
+    [
+      "1:5.3",
+      "1:13.1"
+    ],
+    [
+      "1:6.1",
+      "1:11.3"
+    ],
+    [
+      "1:6.3",
+      "1:10.3"
+    ],
+    [
+      "1:7.2",
+      "1:7.4"
+    ],
+    [
+      "1:8.3",
+      "1:13.1"
+    ],
+    [
+      "1:14.1",
+      "2:4.1"
+    ],
+    [
+      "2:5.3",
+      "3:12.3"
+    ],
+    [
+      "2:11.3",
+      "1:12.3"
+    ],
+    [
+      "3:1.1",
+      "3:11.2"
+    ],
+    [
+      "3:6.1",
+      "1:11.3"
+    ],
+    [
+      "2:4.2",
+      "3:6.2"
+    ],
+    [
+      "3:7.2",
+      "2:9.1"
+    ],
+    [
+      "3:8.1",
+      "3:12.2"
+    ],
+    [
+      "3:2.1",
+      "3:13.3"
+    ],
+    [
+      "1:4.2",
+      "1:9.3"
+    ],
+    [
+      "1:4.2",
+      "1:7.1"
+    ],
+    [
+      "1:11.1",
+      "1:3.3"
+    ],
+    [
+      "1:11.1",
+      "3:17.2"
+    ],
+    [
+      "1:11.2",
+      "2:11.1"
+    ],
+    [
+      "1:11.2",
+      "2:10.3"
+    ],
+    [
+      "1:12.3",
+      "3:7.3"
+    ],
+    [
+      "1:12.3",
+      "3:3.2"
+    ],
+    [
+      "1:13.2",
+      "2:15.1"
+    ],
+    [
+      "1:15.1",
+      "2:6.2"
+    ],
+    [
+      "2:1.2",
+      "1:14.1"
+    ],
+    [
+      "2:3.1",
+      "2:7.2"
+    ],
+    [
+      "2:3.2",
+      "2:6.1"
+    ],
+    [
+      "2:4.3",
+      "2:1.2"
+    ],
+    [
+      "2:8.2",
+      "2:11.3"
+    ],
+    [
+      "2:10.2",
+      "1:3.3"
+    ],
+    [
+      "2:13.1",
+      "3:17.1"
+    ],
+    [
+      "3:2.1",
+      "3:14.2"
+    ],
+    [
+      "3:3.1",
+      "3:5.1"
+    ],
+    [
+      "3:4.2",
+      "2:9.1"
+    ],
+    [
+      "2:7.1",
+      "3:14.2"
+    ],
+    [
+      "3:16.1",
+      "3:15.4"
+    ]
+  ],
+  "suppressNote": [
+    [
+      "2:1.3",
+      "3:14.1"
+    ],
+    [
+      "2:15.3",
+      "2:9.1"
+    ]
+  ],
+  "dropContrastItem": {
+    "1:11.1|你去一去？": "both-correct — 去一去 V一V reduplication is attested (same pair as 3:4.1)",
+    "1:11.1|我不个中国电影也没看过。": "gibberish — 不个 is not a producible learner form",
+    "1:11.2|在他看电视。": "duplicate-node-coverage — node cap 2 (kept 呢-move and 看在-move)",
+    "1:12.2|我看没一个电影。": "implausible — V+没+O (看没) is not a learner production; note doesn't cover 没",
+    "1:13.3|王老师给我们说中文。": "other — exact 给/让 pair already shipped as contrast item on node 2:1.3 in exercises.json",
+    "1:14.1|十二点没，吃午饭吧。": "implausible — declarative sentence-final 没 is not a learner production",
+    "1:14.1|我了买三本书。": "duplicate-node-coverage — same error type as kept 我了看一个电影",
+    "1:14.1|我看一了个电影。": "duplicate-node-coverage — node cap 2 (kept pre-verb 了 and mid-numeral 了 variants)",
+    "1:3.1|我没有中国人。": "duplicate-node-coverage — partner-swap 她是二十个学生 kept for 1:3.1; also polarity mismatch with affirmative gloss makes 没有 trivially dismissible",
+    "1:4.2|一百多十多、两个人": "gibberish — 一百多十多 (same string as 2:2.2 partner-swap)",
+    "1:4.2|三十二岁": "both-correct — 三十二岁 is correct Mandarin and 32 literally is 'mais de trinta' — gloss trap",
+    "2:1.1|你是吧老师？": "both-correct — vocative reading 你是吧，老师？ is defensible colloquial Mandarin",
+    "2:1.2|我今天是早上到的。": "both-correct — 我今天是早上到的 validly focuses 早上",
+    "2:1.2|是我今天早上到的。": "both-correct — 是我今天早上到的 is a valid subject-focus 是……的 cleft",
+    "2:1.2|是我坐飞机来的。": "both-correct — 是我坐飞机来的 is a valid subject-focus cleft",
+    "2:11.1|他着站呢。": "duplicate-node-coverage — same error type as kept 教室的门着开",
+    "2:11.2|他手里着拿手机。": "duplicate-node-coverage — same error type as kept 她着穿白色的裤子",
+    "2:11.2|她穿白色着的裤子。": "duplicate-node-coverage — node cap 2",
+    "2:11.3|我挺喜欢吃中国菜。": "both-correct — 我挺喜欢吃中国菜 is fully correct Mandarin",
+    "2:11.3|这个小区环境最好的。": "both-correct — 环境最好的 has a defensible colloquial affirmation reading; borderline",
+    "2:12.2|我得来比你早。": "duplicate-node-coverage — same error type as kept 李文得跑…",
+    "2:12.2|李文跑比得白家月快。": "duplicate-node-coverage — node cap 2",
+    "2:12.3|他说汉语得说比我好。": "duplicate-node-coverage — same error type as kept 你跑步得跑…",
+    "2:12.3|你跑步跑比得我快。": "duplicate-node-coverage — node cap 2",
+    "2:13.2|比姐姐我大三岁。": "both-correct — fronted reading 比姐姐，我大三岁 exists (and flips meaning)",
+    "2:13.2|这本书那比本贵五块钱。": "implausible — 那比本 splits demonstrative-classifier unit; trivially dismissible",
+    "2:14.2|二十啊个学生、五块啊钱": "gibberish — 二十啊个学生 is not a producible form",
+    "2:2.1|我们打车还是去吧。": "duplicate-node-coverage — node cap 2 (kept partner-swap and 你休息还是一下吧)",
+    "2:2.1|还是你休息一下吧。": "both-correct — 还是你休息一下吧 follows the attested 还是你来吧 pattern",
+    "2:2.1|还是我们打车去吧。": "both-correct — 还是我们打车去吧 is natural Mandarin (还是 before contrasted subject)",
+    "2:2.2|一百多十多、两个人": "gibberish — 一百多十多 is not a producible form",
+    "2:2.3|他卖电影的票很便宜。": "both-correct — parseable as [他卖电影的]票 relative clause",
+    "2:2.3|这是我买书的。": "duplicate-node-coverage — node cap 2; 这是我买书的 also has a defensible 的-nominalization reading",
+    "2:4.1|她过去中国。": "both-correct — 过去+destination reading (她过去中国) is colloquially defensible",
+    "2:4.1|我看这个过电影。": "duplicate-node-coverage — node cap 2; 看这个过 also near-gibberish",
+    "2:8.2|比今天昨天更热。": "both-correct — telegraphic fronted reading 比今天，昨天更热 exists (and flips meaning)",
+    "2:8.2|比这个那个更好。": "both-correct — fronted reading 比这个，那个更好 exists",
+    "3:1.1|看上去他们有点儿像。": "both-correct — sentence-initial 看上去 is fully grammatical",
+    "3:1.1|这些菜都看起来很好吃。": "both-correct — 都 before 看起来 (这些菜都看起来很好吃) is grammatical",
+    "3:10.3|你明天再书把还给我。": "implausible — 再书把 object-before-把 with adverb stranding is not a learner form",
+    "3:10.3|我礼物把送给她了。": "implausible — 礼物把 stranded 把 not a learner production",
+    "3:10.3|把我礼物送给她了。": "both-correct — subject-drop + bare possessive reading (把我礼物送给她了) is grammatical",
+    "3:11.2|我看来没办法解决这个问题。": "both-correct — 看来 validly follows the subject (我看来…) — known suspect",
+    "3:11.2|这么晚了，他看来今天不会来了。": "both-correct — 他看来今天不会来了 is grammatical (post-subject 看来)",
+    "3:11.3|我跟您一起这些把工作做完。": "implausible — 一起这些把 has no learner path",
+    "3:11.3|把妈妈衣服洗干净了。": "both-correct — subject-drop reading 把妈妈衣服洗干净了 is grammatical",
+    "3:12.3|他就昨天看了十分钟书。": "both-correct — 就昨天 = 'only yesterday' — grammatical with shifted focus",
+    "3:12.3|北京常常下雪，但听说今年下就了一次。": "duplicate-node-coverage — node cap; same error type as kept 看就了 item",
+    "3:12.3|北京常常下雪，但听说就今年下了一次。": "both-correct — 就今年下了一次 = 'only this year' — grammatical",
+    "3:13.2|他球把踢进去了。": "duplicate-node-coverage — same error type as kept 你声音把开得太大了",
+    "3:13.2|把他球踢进去了。": "both-correct — subject-drop reading 把他球踢进去了 is defensible",
+    "3:13.2|把你声音开得太大了。": "both-correct — subject-drop + 把你(的)声音 reading is attested colloquial",
+    "3:14.3|你们想吃啊就点啊。": "gibberish — 想吃啊就点啊 is not a producible form",
+    "3:15.1|根据老师每个学生的情况，给不同的作业。": "both-correct — possessor+每个+N (老师每个学生) plus subject-drop is acceptable colloquial",
+    "3:15.1|老师每根据个学生的情况，给不同的作业。": "implausible — 每根据个 splits 每个; trivially dismissible",
+    "3:15.1|这几年小区他们根据的需要，有了很多变化。": "other — borderline — 他们根据的需要 has a verbal-根据 relative-clause parse",
+    "3:16.4|比哥哥弟弟多吃了三个饺子。": "both-correct — fronted reading 比哥哥，弟弟多吃了三个 exists",
+    "3:16.4|比我他晚到了十分钟。": "both-correct — fronted reading 比我，他晚到了十分钟 exists",
+    "3:17.1|以后我要向多认真的人学习。": "duplicate-node-coverage — node cap 2 (kept both 别再向前走 variants)",
+    "3:17.1|以后我要多认真向的人学习。": "duplicate-node-coverage — node cap 2",
+    "3:2.3|急就啊，还有很多时间呢。": "gibberish — 急就啊 is not a producible form",
+    "3:3.1|我挺喜欢吃中国菜。": "both-correct — 我挺喜欢吃中国菜 is fully correct Mandarin — known suspect",
+    "3:3.1|这个小区环境最好的。": "both-correct — 环境最好的 defensible colloquially; borderline",
+    "3:3.3|坐火车去北京，五个才小时能到。": "duplicate-node-coverage — node cap 2; 五个才小时 splits numeral-classifier",
+    "3:3.3|我早上五点起床就了。": "duplicate-node-coverage — node cap 2 (kept one 就 and one 才 item)",
+    "3:4.1|你去一去？": "both-correct — V一V reduplication (去一去) is attested Mandarin",
+    "3:4.2|这家宾馆跟别的都一样不。": "both-correct — colloquial A-not question reading 一样不(一样) is defensible",
+    "3:7.2|今天不比昨天冷。": "both-correct — 今天不比昨天冷 is fully grammatical — known suspect; wrongness is gloss-relative only",
+    "3:7.2|他的不比中文你好。": "gibberish — 他的不比中文 has no parse and no learner path",
+    "3:7.2|他跑不比得我快。": "gibberish — 跑不比得 mangles the 得-complement; not producible"
+  },
+  "contrastNotes": {
+    "3:17.1|别向再前走了。": null,
+    "3:4.2|这个房间跟那个一样房间大。": null,
+    "3:4.2|这个房间跟那个房间大一样。": null
+  },
+  "dropBlankOption": {
+    "1:3.3": [
+      "不"
+    ],
+    "1:6.1": [
+      "要"
+    ],
+    "1:6.3": [
+      "怎么样"
+    ],
+    "1:8.3": [
+      "可以"
+    ],
+    "1:13.1": [
+      "能"
+    ],
+    "1:14.1": [
+      "过"
+    ],
+    "2:4.1": [
+      "了"
+    ],
+    "2:5.1": [
+      "来"
+    ],
+    "2:10.3": [
+      "要",
+      "该"
+    ],
+    "2:14.2": [
+      "太"
+    ],
+    "2:14.3": [
+      "着"
+    ],
+    "3:1.1": [
+      "看来"
+    ],
+    "3:3.2": [
+      "极了"
+    ],
+    "3:5.1": [
+      "极了"
+    ],
+    "3:6.1": [
+      "要"
+    ],
+    "3:7.2": [
+      "没有"
+    ],
+    "3:7.3": [
+      "得很",
+      "坏了"
+    ],
+    "3:10.3": [
+      "拿"
+    ],
+    "3:11.2": [
+      "看上去"
+    ],
+    "3:13.3": [
+      "又"
+    ],
+    "3:15.4": [
+      "一会儿"
+    ],
+    "3:17.2": [
+      "不"
+    ]
+  },
+  "orderAlt": {
+    "1:7.2": {
+      "我们下午见吧。": [
+        "下午我们见吧"
+      ]
+    },
+    "1:7.3": {
+      "她上午十点半上课。": [
+        "上午十点半她上课"
+      ],
+      "我今天不上班。": [
+        "今天我不上班"
+      ]
+    },
+    "1:8.3": {
+      "下午两点你能到吗？": [
+        "你下午两点能到吗"
+      ]
+    },
+    "1:9.2": {
+      "陈天中明天中午在学校吃午饭。": [
+        "明天中午陈天中在学校吃午饭"
+      ],
+      "我明天在家休息。": [
+        "明天我在家休息"
+      ]
+    },
+    "1:10.3": {
+      "你最近怎么样？": [
+        "最近你怎么样"
+      ]
+    },
+    "2:4.1": {
+      "我看过这个电影。": [
+        "这个电影我看过"
+      ]
+    },
+    "2:4.2": {
+      "因为我生病了，今天没去上班。": [
+        "我因为生病了今天没去上班"
+      ]
+    },
+    "2:7.3": {
+      "他篮球打得很好。": [
+        "篮球他打得很好"
+      ]
+    },
+    "2:8.3": {
+      "虽然很累，但是我很高兴。": [
+        "我虽然很累但是很高兴"
+      ]
+    },
+    "2:15.1": {
+      "安妮去过一次北京。": [
+        "安妮去过北京一次"
+      ]
+    },
+    "2:15.2": {
+      "我想再去一次中国。": [
+        "我想再去中国一次"
+      ]
+    },
+    "2:15.3": {
+      "他今年有二十岁了。": [
+        "今年他有二十岁了"
+      ]
+    },
+    "3:1.2": {
+      "我好像在哪儿看到过这个箱子。": [
+        "这个箱子我好像在哪儿看到过"
+      ]
+    },
+    "3:2.1": {
+      "那个女孩儿又高又漂亮。": [
+        "那个女孩儿又漂亮又高"
+      ],
+      "这个饭馆的菜又便宜又好吃。": [
+        "这个饭馆的菜又好吃又便宜"
+      ]
+    },
+    "3:3.2": {
+      "我这几天忙坏了。": [
+        "这几天我忙坏了"
+      ]
+    },
+    "3:3.3": {
+      "我早上五点就起床了。": [
+        "早上五点我就起床了"
+      ]
+    },
+    "3:4.3": {
+      "除了唱歌以外，他也喜欢跳舞。": [
+        "他除了唱歌以外也喜欢跳舞"
+      ]
+    },
+    "3:5.1": {
+      "现在天气好得很。": [
+        "天气现在好得很"
+      ]
+    },
+    "3:5.4": {
+      "昨天我们下了课就回家了。": [
+        "我们昨天下了课就回家了"
+      ]
+    },
+    "3:6.2": {
+      "如果你需要帮忙，就给我打电话。": [
+        "你如果需要帮忙就给我打电话"
+      ],
+      "如果有时间，我就去上海玩几天。": [
+        "我如果有时间就去上海玩几天"
+      ]
+    },
+    "3:8.4": {
+      "考完试以后，咱们一起去旅游吧。": [
+        "咱们考完试以后一起去旅游吧"
+      ]
+    },
+    "3:9.1": {
+      "为了考上大学，她每天努力学习。": [
+        "她为了考上大学每天努力学习"
+      ]
+    },
+    "3:10.3": {
+      "你明天再把书还给我。": [
+        "明天你再把书还给我"
+      ]
+    },
+    "3:12.2": {
+      "最近天气热起来了。": [
+        "天气最近热起来了"
+      ]
+    },
+    "3:12.3": {
+      "他昨天就看了十分钟书。": [
+        "昨天他就看了十分钟书"
+      ]
+    },
+    "3:13.1": {
+      "你们有时间的话，就来我家做客。": [
+        "有时间的话你们就来我家做客"
+      ]
+    },
+    "3:13.3": {
+      "他一边跑步，一边听音乐。": [
+        "他一边听音乐一边跑步"
+      ],
+      "你不应该一边开车一边打电话。": [
+        "你不应该一边打电话一边开车"
+      ]
+    },
+    "3:15.1": {
+      "这几年小区根据他们的需要，有了很多变化。": [
+        "小区这几年根据他们的需要有了很多变化"
+      ]
+    },
+    "3:16.1": {
+      "他一会儿进来，一会儿出去，忙得很。": [
+        "他一会儿出去一会儿进来忙得很"
+      ]
+    },
+    "3:17.1": {
+      "以后我要多向认真的人学习。": [
+        "我以后要多向认真的人学习"
+      ]
+    },
+    "3:18.3": {
+      "只要有时间，我就去锻炼。": [
+        "我只要有时间就去锻炼"
+      ]
+    },
+    "3:18.4": {
+      "他从那时起就努力学习。": [
+        "从那时起他就努力学习"
+      ]
+    }
+  }
+}

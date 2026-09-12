@@ -1,0 +1,2071 @@
+{
+  "nodes": {
+    "1:2.1": {
+      "label": "主谓宾",
+      "pt": "ordem da frase",
+      "topic": "ordem-basica"
+    },
+    "1:3.1": {
+      "label": "是",
+      "pt": "verbo ser",
+      "topic": "existencia"
+    },
+    "1:3.2": {
+      "label": "的",
+      "pt": "posse",
+      "topic": "particulas"
+    },
+    "1:3.3": {
+      "label": "吗",
+      "pt": "perguntas sim/não",
+      "topic": "perguntas"
+    },
+    "1:4.1": {
+      "label": "有",
+      "pt": "ter",
+      "topic": "existencia"
+    },
+    "1:4.2": {
+      "label": "二/两",
+      "pt": "números",
+      "topic": "numerais-medidores"
+    },
+    "1:4.3": {
+      "label": "呢",
+      "pt": "e você?",
+      "topic": "particulas"
+    },
+    "1:4.4": {
+      "label": "个",
+      "pt": "classificadores",
+      "topic": "numerais-medidores"
+    },
+    "1:5.1": {
+      "label": "年月日",
+      "pt": "datas",
+      "topic": "tempo"
+    },
+    "1:5.2": {
+      "label": "名词谓语",
+      "pt": "frase sem verbo",
+      "topic": "ordem-basica"
+    },
+    "1:5.3": {
+      "label": "会",
+      "pt": "saber fazer",
+      "topic": "auxiliares"
+    },
+    "1:6.1": {
+      "label": "想",
+      "pt": "querer",
+      "topic": "auxiliares"
+    },
+    "1:6.2": {
+      "label": "连动句",
+      "pt": "verbos em série",
+      "topic": "verbos"
+    },
+    "1:6.3": {
+      "label": "怎么",
+      "pt": "como?",
+      "topic": "perguntas"
+    },
+    "1:7.1": {
+      "label": "点/分",
+      "pt": "horas",
+      "topic": "tempo"
+    },
+    "1:7.2": {
+      "label": "吧",
+      "pt": "sugestão",
+      "topic": "particulas"
+    },
+    "1:7.3": {
+      "label": "状语",
+      "pt": "lugar do advérbio",
+      "topic": "ordem-basica"
+    },
+    "1:7.4": {
+      "label": "呢",
+      "pt": "ênfase",
+      "topic": "particulas"
+    },
+    "1:8.1": {
+      "label": "方位词",
+      "pt": "palavras de lugar",
+      "topic": "lugar-direcao"
+    },
+    "1:8.2": {
+      "label": "在",
+      "pt": "em (lugar)",
+      "topic": "preposicoes"
+    },
+    "1:8.3": {
+      "label": "能",
+      "pt": "poder (conseguir)",
+      "topic": "auxiliares"
+    },
+    "1:9.1": {
+      "label": "有/是",
+      "pt": "existência",
+      "topic": "existencia"
+    },
+    "1:9.2": {
+      "label": "时间地点",
+      "pt": "tempo e lugar",
+      "topic": "ordem-basica"
+    },
+    "1:9.3": {
+      "label": "第",
+      "pt": "ordinais",
+      "topic": "numerais-medidores"
+    },
+    "1:10.1": {
+      "label": "块",
+      "pt": "dinheiro",
+      "topic": "numerais-medidores"
+    },
+    "1:10.2": {
+      "label": "很",
+      "pt": "frase com adjetivo",
+      "topic": "ordem-basica"
+    },
+    "1:10.3": {
+      "label": "怎么样",
+      "pt": "que tal?",
+      "topic": "perguntas"
+    },
+    "1:11.1": {
+      "label": "V不V",
+      "pt": "pergunta A-não-A",
+      "topic": "perguntas"
+    },
+    "1:11.2": {
+      "label": "正在",
+      "pt": "ação em curso",
+      "topic": "aspecto"
+    },
+    "1:11.3": {
+      "label": "要",
+      "pt": "intenção",
+      "topic": "auxiliares"
+    },
+    "1:12.1": {
+      "label": "无主句",
+      "pt": "frase sem sujeito",
+      "topic": "ordem-basica"
+    },
+    "1:12.2": {
+      "label": "了",
+      "pt": "mudança",
+      "topic": "aspecto"
+    },
+    "1:12.3": {
+      "label": "太…了",
+      "pt": "demais",
+      "topic": "quantidade-grau"
+    },
+    "1:13.1": {
+      "label": "可以",
+      "pt": "permissão",
+      "topic": "auxiliares"
+    },
+    "1:13.2": {
+      "label": "一下",
+      "pt": "um pouquinho",
+      "topic": "quantidade-grau"
+    },
+    "1:13.3": {
+      "label": "双宾",
+      "pt": "dois objetos",
+      "topic": "verbos"
+    },
+    "1:14.1": {
+      "label": "V了",
+      "pt": "ação concluída",
+      "topic": "aspecto"
+    },
+    "1:14.2": {
+      "label": "离合词",
+      "pt": "verbos separáveis",
+      "topic": "verbos"
+    },
+    "1:14.3": {
+      "label": "都",
+      "pt": "todos",
+      "topic": "adverbios"
+    },
+    "1:15.1": {
+      "label": "还/也",
+      "pt": "e também",
+      "topic": "conjuncoes"
+    },
+    "2:1.1": {
+      "label": "吧",
+      "pt": "suposição",
+      "topic": "particulas"
+    },
+    "2:1.2": {
+      "label": "是…的",
+      "pt": "destaque",
+      "topic": "estruturas"
+    },
+    "2:1.3": {
+      "label": "让/叫",
+      "pt": "pedir / mandar",
+      "topic": "verbos"
+    },
+    "2:2.1": {
+      "label": "还是…吧",
+      "pt": "é melhor",
+      "topic": "estruturas"
+    },
+    "2:2.2": {
+      "label": "多",
+      "pt": "mais de",
+      "topic": "numerais-medidores"
+    },
+    "2:2.3": {
+      "label": "V的",
+      "pt": "oração adjetiva",
+      "topic": "particulas"
+    },
+    "2:3.1": {
+      "label": "完/懂",
+      "pt": "resultado",
+      "topic": "complementos"
+    },
+    "2:3.2": {
+      "label": "看看",
+      "pt": "verbo repetido",
+      "topic": "reduplicacao"
+    },
+    "2:3.3": {
+      "label": "看了看",
+      "pt": "fez um pouquinho",
+      "topic": "reduplicacao"
+    },
+    "2:4.1": {
+      "label": "过",
+      "pt": "já fez alguma vez",
+      "topic": "aspecto"
+    },
+    "2:4.2": {
+      "label": "因为",
+      "pt": "causa e efeito",
+      "topic": "conjuncoes"
+    },
+    "2:4.3": {
+      "label": "的",
+      "pt": "o meu, o dele",
+      "topic": "particulas"
+    },
+    "2:5.1": {
+      "label": "来/去",
+      "pt": "vir e ir",
+      "topic": "complementos"
+    },
+    "2:5.2": {
+      "label": "来/去",
+      "pt": "direção + lugar",
+      "topic": "complementos"
+    },
+    "2:5.3": {
+      "label": "都…了",
+      "pt": "já (tempo)",
+      "topic": "aspecto"
+    },
+    "2:6.1": {
+      "label": "AABB",
+      "pt": "adjetivo repetido",
+      "topic": "reduplicacao"
+    },
+    "2:6.2": {
+      "label": "什么的",
+      "pt": "e coisas assim",
+      "topic": "estruturas"
+    },
+    "2:6.3": {
+      "label": "地",
+      "pt": "modo da ação",
+      "topic": "particulas"
+    },
+    "2:7.1": {
+      "label": "一…就",
+      "pt": "assim que",
+      "topic": "conjuncoes"
+    },
+    "2:7.2": {
+      "label": "V得",
+      "pt": "como faz a ação",
+      "topic": "complementos"
+    },
+    "2:7.3": {
+      "label": "V得",
+      "pt": "como faz + objeto",
+      "topic": "complementos"
+    },
+    "2:8.1": {
+      "label": "比",
+      "pt": "comparação",
+      "topic": "comparacao"
+    },
+    "2:8.2": {
+      "label": "还/更",
+      "pt": "ainda mais",
+      "topic": "comparacao"
+    },
+    "2:8.3": {
+      "label": "虽然",
+      "pt": "embora / mas",
+      "topic": "conjuncoes"
+    },
+    "2:9.1": {
+      "label": "没有",
+      "pt": "não tão quanto",
+      "topic": "comparacao"
+    },
+    "2:9.2": {
+      "label": "离",
+      "pt": "distância",
+      "topic": "preposicoes"
+    },
+    "2:9.3": {
+      "label": "时量补语",
+      "pt": "por quanto tempo",
+      "topic": "complementos"
+    },
+    "2:10.1": {
+      "label": "主谓谓语",
+      "pt": "tema e comentário",
+      "topic": "ordem-basica"
+    },
+    "2:10.2": {
+      "label": "还是",
+      "pt": "isto ou aquilo?",
+      "topic": "perguntas"
+    },
+    "2:10.3": {
+      "label": "要…了",
+      "pt": "prestes a",
+      "topic": "aspecto"
+    },
+    "2:11.1": {
+      "label": "着",
+      "pt": "estado contínuo",
+      "topic": "aspecto"
+    },
+    "2:11.2": {
+      "label": "着",
+      "pt": "estado + objeto",
+      "topic": "aspecto"
+    },
+    "2:11.3": {
+      "label": "最",
+      "pt": "o mais",
+      "topic": "quantidade-grau"
+    },
+    "2:12.1": {
+      "label": "多了",
+      "pt": "muito mais",
+      "topic": "comparacao"
+    },
+    "2:12.2": {
+      "label": "得比",
+      "pt": "comparar a ação",
+      "topic": "comparacao"
+    },
+    "2:12.3": {
+      "label": "得比",
+      "pt": "comparar + objeto",
+      "topic": "comparacao"
+    },
+    "2:13.1": {
+      "label": "V给",
+      "pt": "dar a alguém",
+      "topic": "verbos"
+    },
+    "2:13.2": {
+      "label": "大三岁",
+      "pt": "quanto a mais",
+      "topic": "comparacao"
+    },
+    "2:13.3": {
+      "label": "一点儿",
+      "pt": "um pouco mais",
+      "topic": "comparacao"
+    },
+    "2:14.1": {
+      "label": "着",
+      "pt": "há algo ali",
+      "topic": "existencia"
+    },
+    "2:14.2": {
+      "label": "多…啊",
+      "pt": "exclamação",
+      "topic": "quantidade-grau"
+    },
+    "2:14.3": {
+      "label": "进来",
+      "pt": "direção composta",
+      "topic": "complementos"
+    },
+    "2:15.1": {
+      "label": "次",
+      "pt": "quantas vezes",
+      "topic": "complementos"
+    },
+    "2:15.2": {
+      "label": "次",
+      "pt": "vezes + objeto",
+      "topic": "complementos"
+    },
+    "2:15.3": {
+      "label": "有",
+      "pt": "já tem (idade)",
+      "topic": "existencia"
+    },
+    "3:1.1": {
+      "label": "看起来",
+      "pt": "parecer",
+      "topic": "estruturas"
+    },
+    "3:1.2": {
+      "label": "什么",
+      "pt": "algo, alguém",
+      "topic": "pronomes"
+    },
+    "3:1.3": {
+      "label": "多层定语",
+      "pt": "vários adjuntos",
+      "topic": "particulas"
+    },
+    "3:2.1": {
+      "label": "又…又",
+      "pt": "tanto quanto",
+      "topic": "conjuncoes"
+    },
+    "3:2.2": {
+      "label": "谁都",
+      "pt": "qualquer um",
+      "topic": "pronomes"
+    },
+    "3:2.3": {
+      "label": "什么就",
+      "pt": "o que quiser",
+      "topic": "pronomes"
+    },
+    "3:3.1": {
+      "label": "挺",
+      "pt": "bem, bastante",
+      "topic": "quantidade-grau"
+    },
+    "3:3.2": {
+      "label": "坏了",
+      "pt": "demais",
+      "topic": "complementos"
+    },
+    "3:3.3": {
+      "label": "就/才",
+      "pt": "cedo ou tarde",
+      "topic": "adverbios"
+    },
+    "3:4.1": {
+      "label": "一…也不",
+      "pt": "nenhum",
+      "topic": "negacao"
+    },
+    "3:4.2": {
+      "label": "一样",
+      "pt": "igual a",
+      "topic": "comparacao"
+    },
+    "3:4.3": {
+      "label": "除了",
+      "pt": "além de / exceto",
+      "topic": "conjuncoes"
+    },
+    "3:5.1": {
+      "label": "得很",
+      "pt": "muito mesmo",
+      "topic": "complementos"
+    },
+    "3:5.2": {
+      "label": "天天",
+      "pt": "cada um",
+      "topic": "reduplicacao"
+    },
+    "3:5.3": {
+      "label": "存现句",
+      "pt": "surgir e sumir",
+      "topic": "existencia"
+    },
+    "3:5.4": {
+      "label": "了…就",
+      "pt": "assim que",
+      "topic": "conjuncoes"
+    },
+    "3:6.1": {
+      "label": "该…了",
+      "pt": "está na hora",
+      "topic": "auxiliares"
+    },
+    "3:6.2": {
+      "label": "如果",
+      "pt": "se, então",
+      "topic": "conjuncoes"
+    },
+    "3:6.3": {
+      "label": "越来越",
+      "pt": "cada vez mais",
+      "topic": "quantidade-grau"
+    },
+    "3:7.1": {
+      "label": "V着V",
+      "pt": "modo da ação",
+      "topic": "verbos"
+    },
+    "3:7.2": {
+      "label": "不比",
+      "pt": "não mais que",
+      "topic": "comparacao"
+    },
+    "3:7.3": {
+      "label": "极了",
+      "pt": "extremamente",
+      "topic": "complementos"
+    },
+    "3:7.4": {
+      "label": "不但",
+      "pt": "não só, mas",
+      "topic": "conjuncoes"
+    },
+    "3:8.1": {
+      "label": "下去",
+      "pt": "continuar",
+      "topic": "complementos"
+    },
+    "3:8.2": {
+      "label": "离合词",
+      "pt": "verbos separáveis",
+      "topic": "verbos"
+    },
+    "3:8.3": {
+      "label": "时量补语",
+      "pt": "tempo decorrido",
+      "topic": "complementos"
+    },
+    "3:8.4": {
+      "label": "以前/后",
+      "pt": "antes e depois",
+      "topic": "tempo"
+    },
+    "3:9.1": {
+      "label": "为了",
+      "pt": "para (objetivo)",
+      "topic": "conjuncoes"
+    },
+    "3:9.2": {
+      "label": "得/不",
+      "pt": "conseguir ou não",
+      "topic": "complementos"
+    },
+    "3:9.3": {
+      "label": "越…越",
+      "pt": "quanto mais",
+      "topic": "quantidade-grau"
+    },
+    "3:10.1": {
+      "label": "把…在",
+      "pt": "pôr em um lugar",
+      "topic": "estruturas"
+    },
+    "3:10.2": {
+      "label": "在…上",
+      "pt": "em termos de",
+      "topic": "lugar-direcao"
+    },
+    "3:10.3": {
+      "label": "把…给",
+      "pt": "entregar a alguém",
+      "topic": "estruturas"
+    },
+    "3:11.1": {
+      "label": "还是/或",
+      "pt": "ou (duas formas)",
+      "topic": "conjuncoes"
+    },
+    "3:11.2": {
+      "label": "看来",
+      "pt": "pelo visto",
+      "topic": "estruturas"
+    },
+    "3:11.3": {
+      "label": "把…完",
+      "pt": "resultado da ação",
+      "topic": "estruturas"
+    },
+    "3:11.4": {
+      "label": "对…来说",
+      "pt": "para (opinião)",
+      "topic": "preposicoes"
+    },
+    "3:12.1": {
+      "label": "或者",
+      "pt": "ou isto, ou aquilo",
+      "topic": "conjuncoes"
+    },
+    "3:12.2": {
+      "label": "起来",
+      "pt": "começar a",
+      "topic": "complementos"
+    },
+    "3:12.3": {
+      "label": "就",
+      "pt": "só, apenas",
+      "topic": "adverbios"
+    },
+    "3:12.4": {
+      "label": "下来",
+      "pt": "concluir",
+      "topic": "complementos"
+    },
+    "3:13.1": {
+      "label": "的话",
+      "pt": "se for o caso",
+      "topic": "conjuncoes"
+    },
+    "3:13.2": {
+      "label": "把…进去",
+      "pt": "objeto + direção",
+      "topic": "estruturas"
+    },
+    "3:13.3": {
+      "label": "一边",
+      "pt": "ao mesmo tempo",
+      "topic": "conjuncoes"
+    },
+    "3:14.1": {
+      "label": "被",
+      "pt": "voz passiva",
+      "topic": "estruturas"
+    },
+    "3:14.2": {
+      "label": "先…再",
+      "pt": "primeiro, depois",
+      "topic": "conjuncoes"
+    },
+    "3:14.3": {
+      "label": "什么啊",
+      "pt": "que nada!",
+      "topic": "negacao"
+    },
+    "3:15.1": {
+      "label": "根据",
+      "pt": "com base em",
+      "topic": "preposicoes"
+    },
+    "3:15.2": {
+      "label": "一个一个",
+      "pt": "um por um",
+      "topic": "reduplicacao"
+    },
+    "3:15.3": {
+      "label": "在…看来",
+      "pt": "na opinião de",
+      "topic": "estruturas"
+    },
+    "3:15.4": {
+      "label": "不一会儿",
+      "pt": "em pouco tempo",
+      "topic": "tempo"
+    },
+    "3:16.1": {
+      "label": "一会儿",
+      "pt": "ora, ora",
+      "topic": "conjuncoes"
+    },
+    "3:16.2": {
+      "label": "关于",
+      "pt": "sobre (assunto)",
+      "topic": "preposicoes"
+    },
+    "3:16.3": {
+      "label": "一般来说",
+      "pt": "de modo geral",
+      "topic": "estruturas"
+    },
+    "3:16.4": {
+      "label": "比…多",
+      "pt": "diferença na ação",
+      "topic": "comparacao"
+    },
+    "3:17.1": {
+      "label": "向",
+      "pt": "em direção a",
+      "topic": "preposicoes"
+    },
+    "3:17.2": {
+      "label": "不是…吗",
+      "pt": "pergunta retórica",
+      "topic": "perguntas"
+    },
+    "3:17.3": {
+      "label": "更",
+      "pt": "e ainda mais",
+      "topic": "conjuncoes"
+    },
+    "3:17.4": {
+      "label": "只有",
+      "pt": "só assim",
+      "topic": "conjuncoes"
+    },
+    "3:18.1": {
+      "label": "五六",
+      "pt": "uns cinco ou seis",
+      "topic": "numerais-medidores"
+    },
+    "3:18.2": {
+      "label": "刚才刚刚",
+      "pt": "agora há pouco",
+      "topic": "tempo"
+    },
+    "3:18.3": {
+      "label": "只要",
+      "pt": "basta que",
+      "topic": "conjuncoes"
+    },
+    "3:18.4": {
+      "label": "从…起",
+      "pt": "a partir de",
+      "topic": "tempo"
+    }
+  },
+  "edges": [
+    {
+      "a": "1:2.1",
+      "b": "1:3.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:5.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:10.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:3.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:11.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:7.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:6.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:13.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:6.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "2:10.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "3:10.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:2.1",
+      "b": "1:12.1",
+      "type": "contrast",
+      "note": "A frase básica precisa de sujeito; em 下雨了 o fenômeno natural dispensa sujeito."
+    },
+    {
+      "a": "1:7.3",
+      "b": "1:9.2",
+      "type": "progression"
+    },
+    {
+      "a": "1:5.1",
+      "b": "1:9.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:8.2",
+      "b": "1:9.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:7.3",
+      "b": "1:14.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:7.3",
+      "b": "2:11.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:7.3",
+      "b": "1:11.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:7.3",
+      "b": "3:18.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:5.1",
+      "b": "1:5.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:5.2",
+      "b": "1:3.1",
+      "type": "contrast",
+      "note": "Com data, idade ou preço o 是 é dispensável: 今天8号。Em 我是学生 ele é obrigatório."
+    },
+    {
+      "a": "1:10.2",
+      "b": "1:3.1",
+      "type": "contrast",
+      "note": "Antes de adjetivo não se usa 是: diz-se 今天很冷, nunca 今天是冷。"
+    },
+    {
+      "a": "1:10.2",
+      "b": "1:10.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:10.2",
+      "b": "1:12.3",
+      "type": "dependency"
+    },
+    {
+      "a": "2:10.1",
+      "b": "1:10.2",
+      "type": "similarity",
+      "note": "Em 他身体很好 o predicado é uma frase inteira, com adjetivo e 很, dentro da frase maior."
+    },
+    {
+      "a": "1:12.1",
+      "b": "1:12.2",
+      "type": "similarity",
+      "note": "Frases como 下雪了 não têm sujeito e trazem 了 marcando a situação nova."
+    },
+    {
+      "a": "1:3.1",
+      "b": "1:4.1",
+      "type": "contrast",
+      "note": "是 identifica (A é B) e nega com 不是; 有 indica posse e nega com 没有。"
+    },
+    {
+      "a": "1:4.1",
+      "b": "1:9.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:3.1",
+      "b": "1:9.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:9.1",
+      "b": "1:8.2",
+      "type": "contrast",
+      "note": "有/是 apresentam o que existe no lugar; 在 localiza algo que já se conhece."
+    },
+    {
+      "a": "1:4.1",
+      "b": "2:15.3",
+      "type": "progression"
+    },
+    {
+      "a": "1:9.1",
+      "b": "2:14.1",
+      "type": "progression"
+    },
+    {
+      "a": "2:14.1",
+      "b": "3:5.3",
+      "type": "progression"
+    },
+    {
+      "a": "1:3.1",
+      "b": "2:1.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.1",
+      "b": "2:9.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:9.1",
+      "b": "2:15.3",
+      "type": "contrast",
+      "note": "lugar + 有 apresenta o que existe ali; sujeito + 有 + quantidade diz que atinge a medida."
+    },
+    {
+      "a": "2:15.3",
+      "b": "2:9.1",
+      "type": "contrast",
+      "note": "有 + quantidade afirma que alcança a medida; 没有 + adjetivo diz que não alcança B."
+    },
+    {
+      "a": "1:8.1",
+      "b": "1:9.1",
+      "type": "dependency"
+    },
+    {
+      "a": "2:11.2",
+      "b": "2:14.1",
+      "type": "dependency"
+    },
+    {
+      "a": "2:14.3",
+      "b": "3:5.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:3.2",
+      "b": "2:6.3",
+      "type": "contrast",
+      "note": "的 liga o adjunto ao substantivo; 地 liga o adjunto ao verbo e diz como a ação é feita."
+    },
+    {
+      "a": "1:3.2",
+      "b": "2:7.2",
+      "type": "contrast",
+      "note": "的 vem antes do substantivo; 得 vem depois do verbo e introduz o complemento de estado."
+    },
+    {
+      "a": "2:6.3",
+      "b": "2:7.2",
+      "type": "contrast",
+      "note": "地 vem antes do verbo (como se faz); 得 vem depois e avalia como ficou."
+    },
+    {
+      "a": "1:3.2",
+      "b": "2:2.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:2.3",
+      "b": "2:4.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:2.3",
+      "b": "3:1.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:4.3",
+      "b": "2:1.2",
+      "type": "contrast",
+      "note": "As duas terminam em 的: 是……的 destaca a circunstância; 的 sozinho substitui o substantivo."
+    },
+    {
+      "a": "1:3.2",
+      "b": "3:1.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "3:1.3",
+      "type": "dependency"
+    },
+    {
+      "a": "2:6.1",
+      "b": "2:6.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.3",
+      "b": "1:7.4",
+      "type": "progression"
+    },
+    {
+      "a": "1:7.2",
+      "b": "2:1.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:7.2",
+      "b": "1:7.4",
+      "type": "contrast",
+      "note": "吧 suaviza sugestões e pedidos; 呢 no fim marca ação em curso ou devolve a pergunta."
+    },
+    {
+      "a": "1:7.4",
+      "b": "1:11.2",
+      "type": "similarity",
+      "note": "O 呢 final reforça a ação em andamento e costuma aparecer com (正)在。"
+    },
+    {
+      "a": "1:3.3",
+      "b": "1:4.3",
+      "type": "contrast",
+      "note": "……呢？retoma a pergunta anterior sem repeti-la; 吗 faz a pergunta por inteiro."
+    },
+    {
+      "a": "2:1.1",
+      "b": "1:3.3",
+      "type": "contrast",
+      "note": "……吧？já supõe a resposta e pede confirmação; ……吗？pergunta sem supor nada."
+    },
+    {
+      "a": "1:7.2",
+      "b": "2:2.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:3.3",
+      "b": "1:11.1",
+      "type": "contrast",
+      "note": "A pergunta com 吗 pede sim ou não; a forma V不V já oferece as duas opções."
+    },
+    {
+      "a": "1:6.3",
+      "b": "1:10.3",
+      "type": "contrast",
+      "note": "怎么 pergunta o modo (como se faz); 怎么样 pede uma avaliação (que tal?)."
+    },
+    {
+      "a": "1:3.3",
+      "b": "2:10.2",
+      "type": "contrast",
+      "note": "吗 espera sim ou não; a pergunta com 还是 obriga a escolher entre A e B."
+    },
+    {
+      "a": "1:11.1",
+      "b": "2:10.2",
+      "type": "similarity",
+      "note": "As duas dão alternativas: V不V opõe sim e não, 还是 opõe duas opções diferentes."
+    },
+    {
+      "a": "1:3.3",
+      "b": "3:17.2",
+      "type": "progression"
+    },
+    {
+      "a": "1:11.1",
+      "b": "3:17.2",
+      "type": "contrast",
+      "note": "不是……吗？não pede resposta: é retórica e afirma justamente o contrário da dúvida."
+    },
+    {
+      "a": "2:10.2",
+      "b": "3:11.1",
+      "type": "dependency"
+    },
+    {
+      "a": "3:11.1",
+      "b": "3:12.1",
+      "type": "progression"
+    },
+    {
+      "a": "2:10.2",
+      "b": "3:12.1",
+      "type": "contrast",
+      "note": "还是 aparece na pergunta de alternativa; 或者 aparece na frase afirmativa."
+    },
+    {
+      "a": "2:2.1",
+      "b": "2:10.2",
+      "type": "contrast",
+      "note": "还是 na pergunta oferece as opções; 还是……吧 já indica a opção recomendada."
+    },
+    {
+      "a": "1:5.3",
+      "b": "1:8.3",
+      "type": "contrast",
+      "note": "会 = saber fazer algo aprendido; 能 = ter condição ou capacidade no momento."
+    },
+    {
+      "a": "1:8.3",
+      "b": "1:13.1",
+      "type": "contrast",
+      "note": "能 fala de capacidade ou condição; 可以 fala principalmente de permissão."
+    },
+    {
+      "a": "1:5.3",
+      "b": "1:13.1",
+      "type": "contrast",
+      "note": "会 indica habilidade aprendida; 可以 indica permissão para fazer agora."
+    },
+    {
+      "a": "1:6.1",
+      "b": "1:11.3",
+      "type": "contrast",
+      "note": "想 = ter vontade de; 要 = querer com decisão ou estar prestes a fazer."
+    },
+    {
+      "a": "1:5.3",
+      "b": "1:6.1",
+      "type": "similarity",
+      "note": "Como todo verbo modal, 会 e 想 vêm antes do verbo principal e negam com 不。"
+    },
+    {
+      "a": "1:11.3",
+      "b": "2:10.3",
+      "type": "contrast",
+      "note": "要 + verbo = querer ou ir fazer; 要……了 anuncia que algo vai acontecer já."
+    },
+    {
+      "a": "3:6.1",
+      "b": "2:10.3",
+      "type": "similarity",
+      "note": "该……了 diz que chegou a hora de agir; 要……了 diz que o fato está prestes a ocorrer."
+    },
+    {
+      "a": "1:11.3",
+      "b": "3:6.1",
+      "type": "contrast",
+      "note": "要 diz que a pessoa quer ou vai fazer; 该 diz que é hora ou dever de fazer."
+    },
+    {
+      "a": "1:8.3",
+      "b": "3:9.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:12.2",
+      "b": "1:14.1",
+      "type": "contrast",
+      "note": "了 no fim marca mudança de situação; 了 depois do verbo marca ação concluída."
+    },
+    {
+      "a": "1:12.2",
+      "b": "2:5.3",
+      "type": "progression"
+    },
+    {
+      "a": "1:12.2",
+      "b": "2:10.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:5.3",
+      "b": "2:10.3",
+      "type": "contrast",
+      "note": "都……了 diz que já passou muito tempo; 要……了 diz que está prestes a acontecer."
+    },
+    {
+      "a": "1:14.1",
+      "b": "2:4.1",
+      "type": "contrast",
+      "note": "了 marca ação concluída; 过 marca experiência já vivida ao menos uma vez."
+    },
+    {
+      "a": "1:14.1",
+      "b": "2:9.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:11.2",
+      "b": "2:11.1",
+      "type": "contrast",
+      "note": "正在 destaca a ação em andamento; 着 destaca o estado que permanece."
+    },
+    {
+      "a": "2:11.1",
+      "b": "2:11.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:11.1",
+      "b": "3:7.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:14.1",
+      "b": "3:5.4",
+      "type": "dependency"
+    },
+    {
+      "a": "1:14.3",
+      "b": "2:5.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:11.2",
+      "b": "2:10.3",
+      "type": "contrast",
+      "note": "正在 diz que a ação acontece agora; 要……了 diz que ela está para começar."
+    },
+    {
+      "a": "1:14.1",
+      "b": "1:14.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:14.1",
+      "b": "2:3.3",
+      "type": "similarity",
+      "note": "Em 看了看 o 了 entra no meio do verbo reduplicado: ação curta e já concluída."
+    },
+    {
+      "a": "1:14.1",
+      "b": "2:1.2",
+      "type": "contrast",
+      "note": "V + 了 informa que a ação ocorreu; 是……的 destaca quando, onde ou como ela ocorreu."
+    },
+    {
+      "a": "2:4.1",
+      "b": "2:15.1",
+      "type": "similarity",
+      "note": "过 diz que já se fez alguma vez; 次 conta quantas vezes: 去过两次。"
+    },
+    {
+      "a": "1:4.2",
+      "b": "1:4.4",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.2",
+      "b": "1:9.3",
+      "type": "contrast",
+      "note": "Em ordinais usa-se 二 (第二); antes de classificador usa-se 两 (两个)。"
+    },
+    {
+      "a": "1:4.2",
+      "b": "1:7.1",
+      "type": "contrast",
+      "note": "Nas horas diz-se 两点, nunca 二点; 二 fica nos números soltos e nos ordinais."
+    },
+    {
+      "a": "1:4.4",
+      "b": "1:9.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.2",
+      "b": "1:10.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "1:10.1",
+      "type": "similarity",
+      "note": "块/毛/分 funcionam como classificadores do dinheiro: 三块钱、五毛。"
+    },
+    {
+      "a": "1:4.4",
+      "b": "2:2.2",
+      "type": "dependency"
+    },
+    {
+      "a": "2:2.2",
+      "b": "3:18.1",
+      "type": "similarity",
+      "note": "As duas dão número aproximado: 三十多个 e 五六个。"
+    },
+    {
+      "a": "1:4.2",
+      "b": "3:18.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "2:15.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "3:5.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "3:15.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.4",
+      "b": "3:4.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:4.2",
+      "b": "2:2.2",
+      "type": "contrast",
+      "note": "二/两 dão o número exato; número + 多 indica 'e tantos', um valor aproximado."
+    },
+    {
+      "a": "1:5.1",
+      "b": "1:7.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:5.1",
+      "b": "3:8.4",
+      "type": "dependency"
+    },
+    {
+      "a": "3:8.4",
+      "b": "3:18.4",
+      "type": "similarity",
+      "note": "……以后 marca o momento seguinte; 从……起 marca o ponto de partida."
+    },
+    {
+      "a": "1:5.1",
+      "b": "3:18.4",
+      "type": "dependency"
+    },
+    {
+      "a": "1:7.1",
+      "b": "2:9.3",
+      "type": "contrast",
+      "note": "两点 diz o momento em que se faz; 两个小时 diz quanto tempo a ação durou."
+    },
+    {
+      "a": "3:18.2",
+      "b": "3:15.4",
+      "type": "similarity",
+      "note": "刚才/刚刚 olham para o que acabou de passar; 不一会儿 diz que logo depois algo ocorreu."
+    },
+    {
+      "a": "3:15.4",
+      "b": "3:16.1",
+      "type": "contrast",
+      "note": "不一会儿 = pouco tempo depois; 一会儿……一会儿…… = ora uma coisa, ora outra."
+    },
+    {
+      "a": "3:8.4",
+      "b": "3:14.2",
+      "type": "similarity",
+      "note": "……以后 põe um fato depois do outro; 先……再…… ordena as etapas de um plano."
+    },
+    {
+      "a": "1:8.1",
+      "b": "1:8.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:8.1",
+      "b": "3:10.2",
+      "type": "progression"
+    },
+    {
+      "a": "1:8.2",
+      "b": "3:10.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:8.1",
+      "b": "2:5.2",
+      "type": "dependency"
+    },
+    {
+      "a": "1:8.2",
+      "b": "2:9.2",
+      "type": "contrast",
+      "note": "在 diz onde a ação ocorre; 离 mede a distância entre dois pontos."
+    },
+    {
+      "a": "2:9.2",
+      "b": "2:8.1",
+      "type": "similarity",
+      "note": "离 e 比 ligam dois termos: 离 mede distância, 比 mede diferença de grau."
+    },
+    {
+      "a": "1:8.2",
+      "b": "3:17.1",
+      "type": "similarity",
+      "note": "Como 在, a preposição 向 forma locução antes do verbo: 向老师问好。"
+    },
+    {
+      "a": "3:15.1",
+      "b": "3:16.2",
+      "type": "similarity",
+      "note": "根据 introduz a base de uma conclusão; 关于 introduz o assunto de que se fala."
+    },
+    {
+      "a": "3:15.1",
+      "b": "3:16.3",
+      "type": "similarity",
+      "note": "As duas abrem a frase: 根据…… dá a base; 一般来说 dá a regra geral."
+    },
+    {
+      "a": "3:11.4",
+      "b": "3:15.3",
+      "type": "contrast",
+      "note": "对……来说 dá o ponto de vista de quem é afetado; 在……看来 dá a opinião de alguém."
+    },
+    {
+      "a": "3:11.4",
+      "b": "3:10.2",
+      "type": "similarity",
+      "note": "As duas delimitam o âmbito: 在……上 = 'em termos de'; 对……来说 = 'para'."
+    },
+    {
+      "a": "3:11.2",
+      "b": "3:15.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:13.1",
+      "b": "3:17.1",
+      "type": "contrast",
+      "note": "向 marca o alvo antes do verbo (向他学习); 给 marca o destinatário depois (送给他)。"
+    },
+    {
+      "a": "1:8.2",
+      "b": "3:10.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:6.2",
+      "b": "3:7.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:6.2",
+      "b": "2:1.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:13.3",
+      "b": "2:13.1",
+      "type": "progression"
+    },
+    {
+      "a": "1:13.3",
+      "b": "2:1.3",
+      "type": "contrast",
+      "note": "No duplo objeto o 2º elemento é uma coisa; na frase pivô o objeto vira sujeito do 2º verbo."
+    },
+    {
+      "a": "1:14.2",
+      "b": "3:8.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:15.2",
+      "b": "3:8.2",
+      "type": "similarity",
+      "note": "Com verbo separável a contagem entra no meio: 游了两次泳、上了半天班。"
+    },
+    {
+      "a": "1:6.2",
+      "b": "2:5.1",
+      "type": "contrast",
+      "note": "Em 去买东西 o 去 é verbo principal; em 出来 o 来 é complemento direcional."
+    },
+    {
+      "a": "3:7.1",
+      "b": "3:13.3",
+      "type": "similarity",
+      "note": "As duas marcam simultaneidade: 听着音乐写作业 e 一边听一边写。"
+    },
+    {
+      "a": "1:13.3",
+      "b": "3:10.3",
+      "type": "dependency"
+    },
+    {
+      "a": "2:1.3",
+      "b": "3:14.1",
+      "type": "contrast",
+      "note": "叫/让 mandam alguém fazer algo; com 被, 叫/让 introduzem quem praticou a ação."
+    },
+    {
+      "a": "2:3.1",
+      "b": "3:9.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:3.1",
+      "b": "2:7.2",
+      "type": "contrast",
+      "note": "V + 完/懂 diz o resultado da ação; V + 得 + adjetivo avalia como ela foi feita."
+    },
+    {
+      "a": "1:14.1",
+      "b": "2:3.1",
+      "type": "dependency"
+    },
+    {
+      "a": "2:5.1",
+      "b": "2:5.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:5.2",
+      "b": "2:14.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:14.3",
+      "b": "3:8.1",
+      "type": "progression"
+    },
+    {
+      "a": "2:14.3",
+      "b": "3:12.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:14.3",
+      "b": "3:12.4",
+      "type": "progression"
+    },
+    {
+      "a": "3:8.1",
+      "b": "3:12.4",
+      "type": "contrast",
+      "note": "下去 continua a ação já iniciada; 下来 marca o fim ou a fixação do processo."
+    },
+    {
+      "a": "3:12.2",
+      "b": "3:8.1",
+      "type": "contrast",
+      "note": "起来 marca o começo da ação; 下去 marca a continuação do que já começou."
+    },
+    {
+      "a": "2:3.1",
+      "b": "2:14.3",
+      "type": "similarity",
+      "note": "Resultado e direção são complementos colados ao verbo: 吃完 e 走进来。"
+    },
+    {
+      "a": "2:7.2",
+      "b": "2:7.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:7.2",
+      "b": "2:12.2",
+      "type": "dependency"
+    },
+    {
+      "a": "2:7.3",
+      "b": "2:12.3",
+      "type": "dependency"
+    },
+    {
+      "a": "2:9.3",
+      "b": "3:8.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:15.1",
+      "b": "2:15.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:9.3",
+      "b": "2:15.1",
+      "type": "contrast",
+      "note": "O complemento de duração diz quanto tempo durou; o de frequência, quantas vezes."
+    },
+    {
+      "a": "1:13.2",
+      "b": "2:15.1",
+      "type": "contrast",
+      "note": "一下 não conta ocorrências: suaviza a ação; 次 conta quantas vezes ela aconteceu."
+    },
+    {
+      "a": "3:3.2",
+      "b": "3:7.3",
+      "type": "similarity",
+      "note": "Os dois seguem o adjetivo com grau altíssimo: 累坏了 e 好极了。"
+    },
+    {
+      "a": "3:5.1",
+      "b": "3:7.3",
+      "type": "similarity",
+      "note": "得很 e 极了 vêm depois do adjetivo e indicam grau muito alto."
+    },
+    {
+      "a": "3:5.1",
+      "b": "2:7.2",
+      "type": "contrast",
+      "note": "Em 好得很 o 得 introduz o grau; em 跑得很快 o 得 introduz o complemento de estado."
+    },
+    {
+      "a": "3:9.2",
+      "b": "2:7.2",
+      "type": "contrast",
+      "note": "V + 得 + adjetivo avalia como se faz; V + 得 + resultado diz se consegue (听得懂)。"
+    },
+    {
+      "a": "1:12.3",
+      "b": "3:7.3",
+      "type": "contrast",
+      "note": "太……了 costuma trazer exagero ou crítica; ……极了 só marca grau altíssimo."
+    },
+    {
+      "a": "1:12.3",
+      "b": "3:3.2",
+      "type": "contrast",
+      "note": "太 vem antes do adjetivo; ……坏了 vem depois e soa mais coloquial: 累坏了。"
+    },
+    {
+      "a": "2:12.2",
+      "b": "3:16.4",
+      "type": "progression"
+    },
+    {
+      "a": "2:9.3",
+      "b": "3:16.4",
+      "type": "dependency"
+    },
+    {
+      "a": "2:7.2",
+      "b": "3:13.2",
+      "type": "dependency"
+    },
+    {
+      "a": "2:3.1",
+      "b": "3:11.3",
+      "type": "dependency"
+    },
+    {
+      "a": "2:14.3",
+      "b": "3:13.2",
+      "type": "dependency"
+    },
+    {
+      "a": "3:1.1",
+      "b": "3:12.2",
+      "type": "similarity",
+      "note": "看起来 é o 起来 já lexicalizado: aponta a impressão que algo dá."
+    },
+    {
+      "a": "3:8.3",
+      "b": "2:5.3",
+      "type": "similarity",
+      "note": "Em 回家两个月了 e 都两个月了 o 了 final marca o tempo que já passou."
+    },
+    {
+      "a": "2:8.1",
+      "b": "2:8.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:8.2",
+      "b": "2:12.1",
+      "type": "progression"
+    },
+    {
+      "a": "2:12.1",
+      "b": "2:13.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:13.2",
+      "b": "2:13.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:8.1",
+      "b": "2:12.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:12.2",
+      "b": "2:12.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:8.1",
+      "b": "2:9.1",
+      "type": "contrast",
+      "note": "A 比 B 高 afirma a superioridade; A 没有 B 高 diz que A não chega ao nível de B."
+    },
+    {
+      "a": "2:9.1",
+      "b": "3:4.2",
+      "type": "contrast",
+      "note": "没有 marca diferença para menos; 跟……一样 marca igualdade entre A e B."
+    },
+    {
+      "a": "2:8.1",
+      "b": "3:7.2",
+      "type": "contrast",
+      "note": "比 afirma a diferença; 不比 apenas nega que A supere B — não diz que A é menor."
+    },
+    {
+      "a": "3:7.2",
+      "b": "2:9.1",
+      "type": "contrast",
+      "note": "不比 nega a superioridade de A; 没有 afirma que A fica abaixo de B."
+    },
+    {
+      "a": "2:12.1",
+      "b": "2:13.3",
+      "type": "contrast",
+      "note": "多了/得多 marcam diferença grande; 一点儿/一些 marcam diferença pequena."
+    },
+    {
+      "a": "2:8.1",
+      "b": "3:4.2",
+      "type": "progression"
+    },
+    {
+      "a": "2:8.2",
+      "b": "3:17.3",
+      "type": "similarity",
+      "note": "更 intensifica nos dois casos: 比他更高 e ……，更…… na oração progressiva."
+    },
+    {
+      "a": "2:11.3",
+      "b": "2:8.2",
+      "type": "contrast",
+      "note": "更 diz 'ainda mais' que outro; 最 diz 'o mais' de todo o grupo."
+    },
+    {
+      "a": "1:12.3",
+      "b": "2:11.3",
+      "type": "contrast",
+      "note": "太……了 exagera e traz emoção; 最 compara e marca o grau mais alto do grupo."
+    },
+    {
+      "a": "2:14.2",
+      "b": "1:12.3",
+      "type": "similarity",
+      "note": "太……了 e 多……啊 são exclamações de grau: 太好了！e 多好啊！"
+    },
+    {
+      "a": "3:3.1",
+      "b": "1:10.2",
+      "type": "contrast",
+      "note": "很 é o grau neutro do predicado adjetival; 挺……的 soa mais coloquial."
+    },
+    {
+      "a": "3:3.1",
+      "b": "3:5.1",
+      "type": "contrast",
+      "note": "挺 vem antes do adjetivo (挺好的); 得很 vem depois (好得很), com grau mais alto."
+    },
+    {
+      "a": "3:3.1",
+      "b": "2:11.3",
+      "type": "contrast",
+      "note": "最 marca o grau máximo do grupo; 挺 marca grau alto, porém moderado."
+    },
+    {
+      "a": "3:6.3",
+      "b": "3:9.3",
+      "type": "progression"
+    },
+    {
+      "a": "3:6.3",
+      "b": "3:12.2",
+      "type": "similarity",
+      "note": "越来越 marca mudança gradual; V/adj + 起来 marca o início dessa mudança."
+    },
+    {
+      "a": "2:14.2",
+      "b": "2:2.2",
+      "type": "contrast",
+      "note": "多 antes do adjetivo exclama (多好啊); depois do número indica aproximação (三十多)。"
+    },
+    {
+      "a": "1:13.2",
+      "b": "2:3.2",
+      "type": "similarity",
+      "note": "看看 e 看一下 têm o mesmo efeito: fazer a ação um pouquinho, com tom leve."
+    },
+    {
+      "a": "1:13.2",
+      "b": "2:13.3",
+      "type": "similarity",
+      "note": "一下 mede a ação; 一点儿 mede a quantidade ou a diferença — os dois suavizam."
+    },
+    {
+      "a": "2:3.2",
+      "b": "2:3.3",
+      "type": "progression"
+    },
+    {
+      "a": "2:3.2",
+      "b": "2:6.1",
+      "type": "contrast",
+      "note": "Verbo reduplicado suaviza a ação; adjetivo reduplicado descreve com mais vivacidade."
+    },
+    {
+      "a": "2:6.1",
+      "b": "3:5.2",
+      "type": "progression"
+    },
+    {
+      "a": "3:5.2",
+      "b": "3:15.2",
+      "type": "progression"
+    },
+    {
+      "a": "3:5.2",
+      "b": "1:14.3",
+      "type": "similarity",
+      "note": "天天/个个 já significam 'cada, todos' e costumam vir com 都: 个个都很好。"
+    },
+    {
+      "a": "2:4.2",
+      "b": "2:8.3",
+      "type": "similarity",
+      "note": "Nos dois pares o 1º conector abre a oração e o 2º (所以/但是) fecha o raciocínio."
+    },
+    {
+      "a": "2:8.3",
+      "b": "3:7.4",
+      "type": "contrast",
+      "note": "虽然……但是 opõe as duas partes; 不但……而且 soma e reforça."
+    },
+    {
+      "a": "3:6.2",
+      "b": "3:13.1",
+      "type": "similarity",
+      "note": "如果 abre a condição; ……的话 fecha a condição — e podem aparecer juntos."
+    },
+    {
+      "a": "3:6.2",
+      "b": "3:18.3",
+      "type": "progression"
+    },
+    {
+      "a": "3:18.3",
+      "b": "3:17.4",
+      "type": "contrast",
+      "note": "只要 dá a condição suficiente (basta isso); 只有……才 dá a condição indispensável."
+    },
+    {
+      "a": "3:3.3",
+      "b": "3:17.4",
+      "type": "dependency"
+    },
+    {
+      "a": "3:3.3",
+      "b": "3:18.3",
+      "type": "dependency"
+    },
+    {
+      "a": "3:3.3",
+      "b": "3:6.2",
+      "type": "dependency"
+    },
+    {
+      "a": "3:3.3",
+      "b": "3:13.1",
+      "type": "dependency"
+    },
+    {
+      "a": "2:7.1",
+      "b": "3:5.4",
+      "type": "similarity",
+      "note": "一……就…… liga ações imediatas; ……了……就…… faz o mesmo destacando que a 1ª terminou."
+    },
+    {
+      "a": "3:2.1",
+      "b": "3:13.3",
+      "type": "contrast",
+      "note": "又……又…… soma qualidades; 一边……一边…… marca duas ações ao mesmo tempo."
+    },
+    {
+      "a": "3:13.3",
+      "b": "3:16.1",
+      "type": "contrast",
+      "note": "一边……一边…… = ações simultâneas; 一会儿……一会儿…… = ações que se alternam."
+    },
+    {
+      "a": "3:14.2",
+      "b": "2:7.1",
+      "type": "contrast",
+      "note": "先……再…… ordena etapas planejadas; 一……就…… diz que a 2ª vem logo após a 1ª."
+    },
+    {
+      "a": "3:2.1",
+      "b": "3:14.2",
+      "type": "contrast",
+      "note": "又 aqui soma qualidades ao mesmo tempo; 再 marca a ação seguinte na sequência."
+    },
+    {
+      "a": "3:9.1",
+      "b": "2:4.2",
+      "type": "contrast",
+      "note": "因为 dá a causa (por que aconteceu); 为了 dá a finalidade (para quê se faz)."
+    },
+    {
+      "a": "2:4.2",
+      "b": "3:6.2",
+      "type": "contrast",
+      "note": "因为 apresenta uma causa real; 如果 apresenta uma hipótese que pode não ocorrer."
+    },
+    {
+      "a": "1:14.3",
+      "b": "3:4.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:15.1",
+      "b": "3:4.3",
+      "type": "dependency"
+    },
+    {
+      "a": "1:15.1",
+      "b": "3:7.4",
+      "type": "progression"
+    },
+    {
+      "a": "3:7.4",
+      "b": "3:17.3",
+      "type": "similarity",
+      "note": "As duas escalam a informação: 不但……而且 acrescenta; ……，更…… reforça ainda mais."
+    },
+    {
+      "a": "3:4.3",
+      "b": "3:7.4",
+      "type": "similarity",
+      "note": "除了……还…… e 不但……而且…… acrescentam informação além do que já foi dito."
+    },
+    {
+      "a": "1:14.3",
+      "b": "1:15.1",
+      "type": "contrast",
+      "note": "都 resume todos os itens já citados; 也/还 acrescenta mais um item à frase."
+    },
+    {
+      "a": "3:14.2",
+      "b": "3:5.4",
+      "type": "similarity",
+      "note": "先……再…… e ……了……就…… ordenam duas ações; 就 destaca que a 2ª vem logo."
+    },
+    {
+      "a": "3:16.1",
+      "b": "3:12.1",
+      "type": "contrast",
+      "note": "一会儿……一会儿…… alterna ações reais; 或者……或者…… lista opções possíveis."
+    },
+    {
+      "a": "3:11.2",
+      "b": "3:16.3",
+      "type": "similarity",
+      "note": "看来 apresenta a conclusão do que se vê; 一般来说 apresenta uma regra geral."
+    },
+    {
+      "a": "1:15.1",
+      "b": "2:6.2",
+      "type": "contrast",
+      "note": "……还/也…… lista os itens por inteiro; ……什么的 deixa a lista em aberto."
+    },
+    {
+      "a": "3:10.1",
+      "b": "3:10.3",
+      "type": "progression"
+    },
+    {
+      "a": "3:10.3",
+      "b": "3:11.3",
+      "type": "progression"
+    },
+    {
+      "a": "3:11.3",
+      "b": "3:13.2",
+      "type": "progression"
+    },
+    {
+      "a": "3:10.1",
+      "b": "3:14.1",
+      "type": "contrast",
+      "note": "把 põe o foco em quem age sobre o objeto; 被 põe o foco em quem sofre a ação."
+    },
+    {
+      "a": "3:10.3",
+      "b": "2:13.1",
+      "type": "similarity",
+      "note": "Nas duas o 给 marca o destinatário: 送给他 e 把书还给他。"
+    },
+    {
+      "a": "2:3.1",
+      "b": "3:14.1",
+      "type": "dependency"
+    },
+    {
+      "a": "3:1.1",
+      "b": "3:11.2",
+      "type": "contrast",
+      "note": "看上去/看起来 descrevem a aparência de algo; 看来 introduz a conclusão de quem fala."
+    },
+    {
+      "a": "1:6.3",
+      "b": "3:1.2",
+      "type": "dependency"
+    },
+    {
+      "a": "3:1.2",
+      "b": "3:2.2",
+      "type": "progression"
+    },
+    {
+      "a": "3:2.2",
+      "b": "3:2.3",
+      "type": "progression"
+    },
+    {
+      "a": "1:14.3",
+      "b": "3:2.2",
+      "type": "dependency"
+    },
+    {
+      "a": "3:2.3",
+      "b": "3:14.3",
+      "type": "contrast",
+      "note": "Em 想吃什么就点什么 o 什么 é indefinido; em 好什么啊 ele refuta o que foi dito."
+    },
+    {
+      "a": "3:14.3",
+      "b": "3:17.2",
+      "type": "similarity",
+      "note": "As duas refutam o que o outro disse: 好什么啊 e 你不是知道吗？"
+    },
+    {
+      "a": "1:14.3",
+      "b": "3:4.1",
+      "type": "dependency"
+    },
+    {
+      "a": "1:11.1",
+      "b": "3:4.1",
+      "type": "contrast",
+      "note": "Na pergunta V不V, 不 e 没 opõem-se; em 一……也不/没 eles negam de forma absoluta."
+    },
+    {
+      "a": "3:3.3",
+      "b": "3:12.3",
+      "type": "progression"
+    },
+    {
+      "a": "3:12.3",
+      "b": "2:5.3",
+      "type": "contrast",
+      "note": "就 + quantidade diz que é pouco; 都 + tempo/quantidade + 了 diz que já é muito."
+    }
+  ]
+}
