@@ -15,6 +15,7 @@ export interface AgendaItem {
 }
 
 const GCAL_TOKEN_KEY = "eita:gcal";
+const GCAL_STATE_KEY = "eita:gcal:state";
 
 // ---------- event → topic/tone mapping --------------------------------------
 
@@ -107,7 +108,11 @@ export function gcalToken(): { token: string; exp: number } | null {
     const raw = localStorage.getItem(GCAL_TOKEN_KEY);
     if (!raw) return null;
     const t = JSON.parse(raw);
-    return t.exp > Date.now() ? t : null;
+    if (t.exp <= Date.now()) {
+      localStorage.removeItem(GCAL_TOKEN_KEY);
+      return null;
+    }
+    return t;
   } catch {
     return null;
   }
@@ -119,34 +124,57 @@ export function gcalDisconnect() {
 
 /** parse the #access_token=... hash after the OAuth redirect back to /perfil */
 export function gcalConsumeRedirect(): boolean {
-  if (typeof window === "undefined" || !window.location.hash.includes("access_token"))
+  if (typeof window === "undefined" || !window.location.hash.includes("="))
     return false;
   const p = new URLSearchParams(window.location.hash.slice(1));
   const token = p.get("access_token");
-  const ttl = Number(p.get("expires_in") ?? 3600);
+  const error = p.get("error");
+  if (!token && !error) return false;
+  // the state we sent must round-trip — ignore foreign/injected responses
+  const expected = sessionStorage.getItem(GCAL_STATE_KEY);
+  if (expected && p.get("state") !== expected) {
+    history.replaceState(null, "", window.location.pathname);
+    return false;
+  }
+  sessionStorage.removeItem(GCAL_STATE_KEY);
+  history.replaceState(null, "", window.location.pathname);
   if (!token) return false;
+  const ttl = Number(p.get("expires_in") ?? 3600);
   localStorage.setItem(
     GCAL_TOKEN_KEY,
     JSON.stringify({ token, exp: Date.now() + ttl * 1000 })
   );
-  history.replaceState(null, "", window.location.pathname);
   return true;
 }
 
 export function gcalConnectUrl(): string {
   const cid = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
-  const redirect = `${window.location.origin}/perfil`;
+  const l = window.location;
+  // redirect_uri must match a registered URI exactly — normalize any local
+  // alias (127.0.0.1, LAN IP, *.local) to localhost so one registration
+  // covers every address the dev server might be opened from
+  const host = l.hostname.replace(/^\[|\]$/g, "");
+  const isLocal =
+    host === "localhost" ||
+    host === "::1" ||
+    host.endsWith(".local") ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(host);
+  const origin = isLocal ? `http://localhost${l.port ? `:${l.port}` : ""}` : l.origin;
+  const redirect = `${origin}/perfil`;
+  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  sessionStorage.setItem(GCAL_STATE_KEY, state);
   const q = new URLSearchParams({
     client_id: cid,
     redirect_uri: redirect,
     response_type: "token",
     scope: "https://www.googleapis.com/auth/calendar.events.readonly",
     include_granted_scopes: "true",
+    state,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${q}`;
 }
 
-async function fetchGoogleEvents(token: string, now: Date): Promise<AgendaItem[]> {
+export async function fetchGoogleEvents(token: string, now: Date): Promise<AgendaItem[]> {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(now);
@@ -162,17 +190,27 @@ async function fetchGoogleEvents(token: string, now: Date): Promise<AgendaItem[]
     `https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`,
     { headers: { Authorization: `Bearer ${token}` } }
   );
-  if (!res.ok) throw new Error(`gcal ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(`gcal ${res.status}`), { status: res.status });
   interface GEvent {
     id: string;
     summary?: string;
-    start?: { dateTime?: string };
+    start?: { dateTime?: string; date?: string };
   }
   const data = (await res.json()) as { items?: GEvent[] };
   return (data.items ?? [])
-    .filter((e) => e.start?.dateTime)
-    .map((e) => {
-      const at = new Date(e.start!.dateTime!);
+    .map((e): AgendaItem | null => {
+      // timed events carry dateTime; all-day events carry a date (YYYY-MM-DD)
+      // which we anchor at 9am local — parse it by hand because `new Date(s)`
+      // would treat it as UTC midnight and can land on the wrong day
+      let at: Date;
+      if (e.start?.dateTime) {
+        at = new Date(e.start.dateTime);
+      } else if (e.start?.date) {
+        const [y, m, d] = e.start.date.split("-").map(Number);
+        at = new Date(y, m - 1, d, 9, 0);
+      } else {
+        return null;
+      }
       const { topic, emoji } = eventTopic(e.summary ?? "");
       return {
         id: `g:${e.id}`,
@@ -183,7 +221,8 @@ async function fetchGoogleEvents(token: string, now: Date): Promise<AgendaItem[]
         moment: nearestMoment(at),
         emoji,
       };
-    });
+    })
+    .filter((e): e is AgendaItem => e !== null);
 }
 
 // ---------- assembled agenda ----------------------------------------------------
@@ -197,8 +236,11 @@ export async function getAgenda(
     try {
       const items = await fetchGoogleEvents(t.token, now);
       return { items: items.sort((a, b) => a.start.getTime() - b.start.getTime()), source: "google" };
-    } catch {
-      gcalDisconnect();
+    } catch (err) {
+      // a revoked/expired token should drop the connection; a flaky network
+      // shouldn't — keep the token and just show the demo agenda this render
+      const status = (err as { status?: number }).status;
+      if (status === 401 || status === 403) gcalDisconnect();
     }
   }
   return { items: demoAgenda(now), source: "demo" };
