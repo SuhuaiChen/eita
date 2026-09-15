@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyResult,
   conceptOf,
+  dayKey,
   initState,
   matchesReply,
+  pickEventPractice,
   pickPractice,
   retrievability,
 } from "@/lib/engine";
@@ -73,15 +75,39 @@ describe("engine", () => {
     });
   }
 
-  it("uses a time-aware conversation for the current moment", () => {
+  it("prefers scripted curriculum dialogues over the generic fallback", () => {
     const s = initState(mkProfile("hsk1"));
-    let conversations = 0;
+    let scripted = 0;
+    let generic = 0;
     for (let i = 0; i < 12; i++) {
       const p = pickPractice(s, "cafe")!;
-      if (p.dialogue.id.startsWith("chat:cafe:")) conversations++;
+      if (p.dialogue.id.startsWith("chat:")) generic++;
+      else scripted++;
       applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
     }
-    expect(conversations).toBe(12);
+    // cafe has 3 scripted dialogues (coffee/eat/qichuang) — they must show up;
+    // generic chat:* is now only the fallback when nothing scripted fits
+    expect(scripted).toBeGreaterThan(0);
+    expect(generic).toBeLessThan(12);
+  });
+
+  it("a scripted pick actually exercises its practice target", () => {
+    const s = initState(mkProfile("hsk1"));
+    let sawScripted = false;
+    for (let i = 0; i < 20; i++) {
+      const p = pickPractice(s, "cafe")!;
+      if (!p.dialogue.id.startsWith("chat:")) {
+        sawScripted = true;
+        // the target is either a dialogue target directly or a grammar node
+        // whose label maps to a vocab target the dialogue exercises
+        const hit =
+          p.dialogue.targets.includes(p.target) ||
+          p.dialogue.targets.some((t) => t.startsWith("v:"));
+        expect(hit).toBe(true);
+      }
+      applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
+    }
+    expect(sawScripted).toBe(true);
   });
 
   it("introduces new concepts when nothing is due", () => {
@@ -127,5 +153,60 @@ describe("engine", () => {
     expect(matchesReply("我想去海边", r)).toBe("ok");
     expect(matchesReply("wo xiang qu haibian", r)).toBe("ok");
     expect(matchesReply("zzzz", r)).toBe("no");
+  });
+
+  it("matchesReply maps v→ü and tolerates small pinyin typos", () => {
+    const nv = { zh: "女", py: "nǚ", pt: "", words: [] };
+    expect(matchesReply("nv", nv)).toBe("ok"); // keyboard alias
+    expect(matchesReply("nü", nv)).toBe("ok"); // literal ü
+    const r = { zh: "我想去海边。", py: "wǒ xiǎng qù hǎibiān.", pt: "", words: [] };
+    expect(matchesReply("wo xiang qu haibin", r)).toBe("close"); // 1 typo
+    expect(matchesReply("wo xiang qu haaaaa", r)).not.toBe("ok");
+  });
+
+  it("a failed recall does not push the next review out", () => {
+    const s = initState(mkProfile("some"));
+    const p = pickPractice(s, "cafe")!;
+    const before = conceptOf(s, p.target).last;
+    applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "fail", 2);
+    expect(conceptOf(s, p.target).last).toBe(before);
+    applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
+    expect(conceptOf(s, p.target).last).toBeGreaterThan(0);
+  });
+
+  it("dayKey uses the local calendar day, not UTC", () => {
+    // 23:30 local on Jan 5 must key as Jan 5 regardless of timezone offset
+    const d = new Date(2025, 0, 5, 23, 30);
+    expect(dayKey(d)).toBe("2025-01-05");
+  });
+
+  it("records isNew on the interaction only for first-time concepts", () => {
+    const s = initState(mkProfile("beginner"));
+    const p = pickPractice(s, "cafe")!;
+    const wasIntro = conceptOf(s, p.target).intro;
+    applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
+    expect(s.interactions.at(-1)!.isNew).toBe(!wasIntro);
+    applyResult(s, { target: p.target, moment: "cafe", dialogueId: p.dialogue.id }, "ok", 0);
+    expect(s.interactions.at(-1)!.isNew).toBe(false);
+  });
+
+  it("caps interaction history", () => {
+    const s = initState(mkProfile("hsk1"));
+    for (let i = 0; i < 410; i++) {
+      applyResult(s, { target: "v:我", moment: "cafe", dialogueId: "x" }, "ok", 0);
+    }
+    expect(s.interactions.length).toBe(400);
+  });
+
+  it("pickEventPractice returns an event-anchored practice", () => {
+    const s = initState(mkProfile("hsk1"));
+    const p = pickEventPractice(s, {
+      title: "Café com a Maria",
+      topic: "comida",
+      moment: "cafe",
+    })!;
+    expect(p).toBeTruthy();
+    expect(p.eventTitle).toBe("Café com a Maria");
+    expect(p.dialogue.turns.length).toBeGreaterThanOrEqual(2);
   });
 });

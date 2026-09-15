@@ -216,6 +216,44 @@ for (const w of overrides.segmentWords || []) {
 }
 const SPLIT = overrides.segmentSplit || {};
 
+// human-checked PT glosses for words the dataset leaves blank (proper nouns,
+// reduplications, compounds) — word chips should never show an empty meaning
+const PT_FIX = {
+  陈天中: "Chen Tianzhong (nome próprio)",
+  白家月: "Bai Jiayue (nome próprio)",
+  家月: "Jiayue (nome próprio)",
+  安妮: "Annie (nome próprio)",
+  李文: "Li Wen (nome próprio)",
+  上海: "Xangai (cidade)",
+  春节: "Ano-Novo Chinês",
+  干干净净: "bem limpo(a)",
+  高高兴兴: "bem contente",
+  漂漂亮亮: "bem bonito(a)",
+  大大: "bem grande",
+  慢慢: "devagarinho",
+  个个: "cada um(a)",
+  张张: "cada um (folhas, bilhetes)",
+  下雪: "nevar",
+  每天: "todo dia",
+  越来越: "cada vez mais",
+  来说: "em termos de; falando de",
+  有点儿: "um pouco",
+  点儿: "um pouquinho",
+  看起来: "parece; dá a impressão",
+  看上去: "parece",
+  情况: "situação",
+  想法: "ideia",
+  会议室: "sala de reunião",
+  咖啡店: "cafeteria",
+  作业本: "caderno de tarefa",
+  烤鸭: "pato laqueado",
+  真正: "de verdade; genuíno",
+};
+for (const [w, pt] of Object.entries(PT_FIX)) {
+  const e = lexicon.get(w);
+  if (e && !(e.pt || "").trim()) e.pt = pt;
+}
+
 // ---------- segmentation ---------------------------------------------------
 
 const PUNCT = new Set(["。", "，", "？", "！", "、", "：", "；", "…", "—", "“", "”", "「", "」", "（", "）", "·", "＿"]);

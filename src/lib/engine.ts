@@ -49,7 +49,7 @@ export const TOPICS: { id: TopicId; emoji: string; label: string }[] = [
   { id: "viagens", emoji: "✈️", label: "Viagens" },
   { id: "familia", emoji: "👨‍👩‍👧", label: "Família" },
   { id: "comida", emoji: "🍜", label: "Comida" },
-  { id: "culinaria", emoji: "🍳", label: "Culinária" },
+  { id: "culinaria", emoji: "🍳", label: "Cozinhar" },
   { id: "musica", emoji: "🎵", label: "Música" },
   { id: "filmes", emoji: "🎬", label: "Filmes e TV" },
   { id: "esportes", emoji: "⚽", label: "Esportes" },
@@ -65,6 +65,13 @@ export const momentById = (id: MomentId) => MOMENTS.find((m) => m.id === id)!;
 // ---------- memory model ----------------------------------------------------
 
 const DAY = 86_400_000;
+
+/** local YYYY-MM-DD — toISOString() is UTC and rolls "today" at 21:00 in Brazil */
+export function dayKey(d: Date | number): string {
+  const x = new Date(d);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())}`;
+}
 
 export const defaultConcept = (): ConceptState => ({
   f: 0,
@@ -147,7 +154,11 @@ export function initState(profile: Profile): LearnerState {
   const state: LearnerState = {
     profile,
     concepts: {},
-    confidencePressure: 0,
+    // self-reported confidence sets the opening pressure: low confidence
+    // starts right at the recovery threshold so the first practice is an
+    // easy retained win, not a hard due pick
+    confidencePressure:
+      profile.selfConfidence === "low" ? 0.5 : profile.selfConfidence === "medium" ? 0.2 : 0,
     interactions: [],
     recentTargets: [],
     recentDialogues: [],
@@ -163,12 +174,13 @@ export function initState(profile: Profile): LearnerState {
   if (profile.level === "some") {
     seedWords(SOME_EXTRA, 0.55, 2.5);
   } else if (profile.level === "hsk1") {
-    seedWords(SOME_EXTRA, 0.7, 4);
     seedWords(
       curriculum.vocab.filter((v) => v.lv === 1 && !v.supp).map((v) => v.w),
       0.6,
       3
     );
+    // after the blanket pass so the emphasis survives the overlap
+    seedWords(SOME_EXTRA, 0.7, 4);
     for (const n of curriculum.nodes.filter((n) => n.lv === 1))
       seed(state, n.id, 0.45, 2);
   } else if (profile.level === "hsk2") {
@@ -219,11 +231,13 @@ function affinity(
 
 const isGrammar = (id: ConceptId) => id.startsWith("g:");
 
-function allConcepts(): { id: ConceptId; moments: MomentId[]; topics: TopicId[]; lv: number; ord: number }[] {
-  return [
-    ...curriculum.vocab.map((v) => ({ id: v.id, moments: v.moments, topics: v.topics, lv: v.lv, ord: curriculum.vocab.indexOf(v) })),
-    ...curriculum.nodes.map((n) => ({ id: n.id, moments: n.moments, topics: n.topics, lv: n.lv, ord: 500 + n.lesson * 10 })),
-  ];
+const ALL_CONCEPTS: { id: ConceptId; moments: MomentId[]; topics: TopicId[]; lv: number; ord: number }[] = [
+  ...curriculum.vocab.map((v, i) => ({ id: v.id, moments: v.moments, topics: v.topics, lv: v.lv, ord: i })),
+  ...curriculum.nodes.map((n) => ({ id: n.id, moments: n.moments, topics: n.topics, lv: n.lv, ord: 500 + n.lesson * 10 })),
+];
+
+function allConcepts() {
+  return ALL_CONCEPTS;
 }
 
 /** due concepts, highest need first */
@@ -351,13 +365,13 @@ function genericDialogue(
   if (!item) return null;
   const turnsByMoment: Record<MomentId, DialogueTurn[]> = {
     cafe: [
-      P("早上好！你喝什么？", "zǎoshang hǎo! nǐ hē shénme?", "Bom dia! O que você bebe?"),
+      P("早上好！你喝什么？", "zǎoshang hǎo! nǐ hē shénme?", "Bom dia! O que você quer beber?"),
       L([
-        R("我喝茶。", "wǒ hē chá.", "Eu bebo chá."),
-        R("我喝咖啡。", "wǒ hē kāfēi.", "Eu bebo café."),
+        R("我喝茶。", "wǒ hē chá.", "Eu tomo chá."),
+        R("我喝咖啡。", "wǒ hē kāfēi.", "Eu tomo café."),
         R("我喝水。", "wǒ hē shuǐ.", "Eu bebo água."),
       ]),
-      P("很好！今天开心！", "hěn hǎo! jīntiān kāixīn!", "Que bom! Tenha um dia feliz!"),
+      P("很好！今天开心！", "hěn hǎo! jīntiān kāixīn!", "Que bom! Um ótimo dia pra você!"),
     ],
     almoco: [
       P("中午好！你吃饭了吗？", "zhōngwǔ hǎo! nǐ chī fàn le ma?", "Boa tarde! Você já almoçou?"),
@@ -475,21 +489,42 @@ function anyMomentDialogue(
 
 const PY_STRIP = (s: string) =>
   s
+    .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/ü/g, "v")
-    .replace(/[^a-zA-Zv]/g, "")
-    .toLowerCase();
+    .replace(/v/g, "u") // 'v' is the standard keyboard alias for ü (nǚ → nv)
+    .replace(/[^a-z]/g, "");
+
+function editDist(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 2) return 99;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+  return dp[m][n];
+}
 
 /** does a typed answer match any offered reply? (hanzi or toneless pinyin) */
 export function matchesReply(input: string, reply: DialogueLine): "ok" | "close" | "no" {
   const clean = (s: string) => s.replace(/[\s。，？！、,.!?·＿]/g, "");
   const hzIn = clean(input);
   if (hzIn && hzIn === clean(reply.zh)) return "ok";
-  if (reply.py && PY_STRIP(input) && PY_STRIP(input) === PY_STRIP(reply.py)) return "ok";
+  const pyIn = PY_STRIP(input);
+  const pyRef = reply.py ? PY_STRIP(reply.py) : "";
+  if (pyIn && pyRef && pyIn === pyRef) return "ok";
   const chars = [...clean(reply.zh)].filter((c) => !ALWAYS_KNOWN.has(c));
   const hit = chars.filter((c) => hzIn.includes(c)).length;
   if (chars.length && hit / chars.length >= 0.75) return "close";
+  // one small pinyin typo still counts as "almost" for this audience
+  if (pyIn.length >= 3 && pyRef && editDist(pyIn, pyRef) <= (pyRef.length > 6 ? 2 : 1))
+    return "close";
   return "no";
 }
 
@@ -540,8 +575,6 @@ export function pickEventPractice(
   if (dialogue && target && !scriptMatches(dialogue, target)) {
     target = dialogue.targets[0];
   }
-  // Agenda practice should always feel like a small exchange, not a worksheet.
-  dialogue = null;
   if (!dialogue) {
     target ??= pickDueList(state, ev.moment, now, 5)[0]?.id ?? null;
     target ??= pickNewConcept(state, ev.moment);
@@ -557,7 +590,7 @@ export function pickEventPractice(
     previewZh: opener?.zh ?? "",
     previewPy: opener?.py,
     recovery: false,
-    isNew: false,
+    isNew: !conceptOf(state, target).intro,
     eventTitle: ev.title,
   };
 }
@@ -592,6 +625,7 @@ export function pickPractice(
   now = Date.now()
 ): Practice | null {
   const recovery = state.confidencePressure >= 0.5;
+  const today = dayKey(now);
   const dueList = pickDueList(state, moment, now, 120);
   const top = dueList[0] ?? null;
   let target: ConceptId | null = null;
@@ -600,6 +634,10 @@ export function pickPractice(
 
   if (recovery) {
     target = pickRetained(state, moment, now);
+    if (target) {
+      const d = scriptedFor(state, target, moment, now);
+      if (d) dialogue = shorten(d);
+    }
   } else {
     // find the most-due concept that has a real conversation to offer
     const coverable = coverableConcepts(moment);
@@ -613,7 +651,13 @@ export function pickPractice(
       }
     }
     if (!dialogue) {
-      if (!top || top.need < 0.3) {
+      // a gentle quota keeps new words coming even when the due pool is deep —
+      // without it, hsk1/hsk2 learners review hundreds of seeds forever and
+      // never meet fresh material
+      const newToday = state.interactions.filter(
+        (i) => i.isNew && dayKey(i.ts) === today
+      ).length;
+      if (!top || top.need < 0.3 || (newToday < 2 && Math.random() < 0.4)) {
         // nothing pressing — new word, or a light review chat
         const casual = anyMomentDialogue(state, moment);
         if (casual && Math.random() < 0.5) {
@@ -630,9 +674,6 @@ export function pickPractice(
   }
   if (!target) return null;
 
-  // Curriculum dialogue data also contains meaning checks. Keep its adaptive
-  // target selection, but present the learner with a time-of-day conversation.
-  dialogue = null;
   dialogue ??= genericDialogue(state, target, moment, now, {
     intro: isNew,
     recovery,
@@ -661,20 +702,23 @@ export function applyResult(
   helpLevel: number,
   now = Date.now()
 ): LearnerState {
-  const cs = { ...conceptOf(state, practice.target) };
+  const prior = conceptOf(state, practice.target);
+  const cs = { ...prior };
+  const wasNew = !prior.intro;
   cs.intro = true;
   cs.seen += 1;
   cs.help += helpLevel;
-  cs.last = now;
 
   if (outcome === "ok") {
     cs.ok += 1;
+    cs.last = now;
     const gain = helpLevel === 0 ? 0.22 : 0.1;
     cs.f = Math.min(1, cs.f + gain + 0.06 * cs.f);
     cs.stab = Math.min(30, cs.stab * (helpLevel === 0 ? 2.3 : 1.6) + 0.4);
     state.confidencePressure = Math.max(0, state.confidencePressure - 0.3);
   } else if (outcome === "ok-help") {
     cs.ok += 1;
+    cs.last = now;
     cs.f = Math.min(1, cs.f + 0.08);
     cs.stab = Math.min(30, cs.stab * 1.35 + 0.2);
     state.confidencePressure = Math.max(0, state.confidencePressure - 0.1 + helpLevel * 0.03);
@@ -682,6 +726,8 @@ export function applyResult(
     cs.fail += 1;
     cs.f = Math.max(0, cs.f - 0.06);
     cs.stab = Math.max(0.4, cs.stab * 0.7);
+    // no cs.last stamp — a failed recall stays due instead of pushing the
+    // next review out as if it had succeeded
     state.confidencePressure = Math.min(1, state.confidencePressure + 0.34 + helpLevel * 0.05);
   }
 
@@ -693,7 +739,9 @@ export function applyResult(
     type: "dialogue",
     result: outcome,
     helpLevel,
+    isNew: wasNew,
   });
+  if (state.interactions.length > 400) state.interactions = state.interactions.slice(-400);
   state.recentTargets = [
     practice.target,
     ...state.recentTargets.filter((t) => t !== practice.target),
@@ -704,9 +752,12 @@ export function applyResult(
       ...(state.recentDialogues ?? []).filter((d) => d !== practice.dialogueId),
     ].slice(0, 6);
 
-  const day = new Date(now).toISOString().slice(0, 10);
+  const day = dayKey(now);
   const done = state.dailyDone[day] ?? [];
   if (!done.includes(practice.moment)) state.dailyDone[day] = [...done, practice.moment];
+  const days = Object.keys(state.dailyDone);
+  if (days.length > 45)
+    for (const d of days.sort().slice(0, days.length - 45)) delete state.dailyDone[d];
   return state;
 }
 
@@ -719,11 +770,11 @@ export function stats(state: LearnerState, now = Date.now()) {
   const learning = Object.values(state.concepts).filter((c) => c.intro && c.f < 0.55);
   const recent = state.interactions.slice(-14);
   const noHelpRate = recent.length
-    ? recent.filter((i) => i.helpLevel === 0 && i.result !== "fail").length / recent.length
+    ? recent.filter((i) => i.result === "ok").length / recent.length
     : 0;
   const week: { day: string; count: number }[] = [];
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(now - i * DAY).toISOString().slice(0, 10);
+    const d = dayKey(now - i * DAY);
     week.push({ day: d, count: state.dailyDone[d]?.length ?? 0 });
   }
   const masteredSentences = Object.entries(state.concepts)

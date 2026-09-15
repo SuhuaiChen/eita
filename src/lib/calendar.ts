@@ -1,7 +1,7 @@
 // Agenda model — Google Calendar when connected, a built-in demo agenda
 // otherwise. Each event can spawn a micro-dialogue ~1h before it starts.
 import type { MomentId, Profile, TopicId } from "./types";
-import { momentById } from "./engine";
+import { dayKey, momentById } from "./engine";
 
 export interface AgendaItem {
   id: string;
@@ -64,7 +64,7 @@ const FIXED: { title: string; topic: TopicId; emoji: string; hour: number; minut
 ];
 
 export function demoAgenda(now: Date): AgendaItem[] {
-  const daySeed = now.toISOString().slice(0, 10);
+  const daySeed = dayKey(now);
   const item = (
     i: number,
     title: string,
@@ -188,7 +188,7 @@ export async function fetchGoogleEvents(token: string, now: Date): Promise<Agend
   });
   const res = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/primary/events?${q}`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }
   );
   if (!res.ok) throw Object.assign(new Error(`gcal ${res.status}`), { status: res.status });
   interface GEvent {

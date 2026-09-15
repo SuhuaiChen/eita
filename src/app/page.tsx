@@ -15,7 +15,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center">
-      <p className="zh text-[3rem] font-semibold text-accent">乒</p>
+      <p lang="zh-CN" className="zh text-[3rem] font-semibold text-accent">乒</p>
     </div>
   );
 }

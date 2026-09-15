@@ -14,7 +14,7 @@ export type CheerSpec = {
 };
 
 const PRAISE_SOLO = [
-  "Você falou chinês sozinho!",
+  "Você falou chinês sozinho(a)!",
   "Isso — você conseguiu!",
   "Mandou muito bem!",
   "Olha você conversando em chinês!",
@@ -73,7 +73,8 @@ export default function Celebration({
   return (
     <div
       className={`absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-surface/95 ${
-        fading ? "cheer-fade" : ""
+        // opacity:0 elements still capture clicks — let taps through once faded
+        fading ? "cheer-fade pointer-events-none" : ""
       }`}
       role="status"
     >
@@ -83,6 +84,7 @@ export default function Celebration({
             <span
               key={i}
               className="confetti"
+              aria-hidden="true"
               style={{
                 left: `${p.left}%`,
                 bottom: "30%",
@@ -93,7 +95,7 @@ export default function Celebration({
               {p.e}
             </span>
           ))}
-          <p className="cheer-in text-[4rem]">🎉</p>
+          <p className="cheer-in text-[4rem]" aria-hidden="true">🎉</p>
           <p className="cheer-in mt-3 text-[1.7rem] font-bold leading-tight [animation-delay:120ms]">
             {line}
           </p>
@@ -111,6 +113,7 @@ export default function Celebration({
             <span
               key={i}
               className="confetti"
+              aria-hidden="true"
               style={{
                 left: `${p.left}%`,
                 bottom: "25%",
@@ -134,7 +137,7 @@ export default function Celebration({
 
       {design === 2 && (
         <div className="flex flex-col items-center px-6 text-center">
-          <div className="glow-pulse cheer-in flex h-28 w-28 items-center justify-center rounded-full bg-jade text-[3.2rem] text-white">
+          <div className="glow-pulse cheer-in flex h-28 w-28 items-center justify-center rounded-full bg-jade text-[3.2rem] text-white" aria-hidden="true">
             ✓
           </div>
           <p className="cheer-in mt-5 text-[1.6rem] font-bold leading-tight [animation-delay:120ms]">

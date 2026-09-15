@@ -13,9 +13,9 @@ import {
   gcalToken,
   googleConfigured,
 } from "@/lib/calendar";
-import type { SelfConfidence } from "@/lib/types";
+import type { LevelId, SelfConfidence } from "@/lib/types";
 
-const LEVEL_LABEL: Record<string, string> = {
+const LEVEL_LABEL: Record<LevelId, string> = {
   beginner: "Estou começando",
   some: "Já sei um pouco",
   hsk1: "≈ HSK 1",
@@ -55,7 +55,7 @@ export default function Perfil() {
       <div className="flex items-center justify-between">
         <h1 className="text-[2rem] font-bold">{p.name}</h1>
         <button
-          className="text-[1rem] text-muted underline underline-offset-4"
+          className="min-h-11 px-3 text-[1rem] text-muted underline underline-offset-4"
           onClick={() => {
             setName(p.name);
             setEditingName(true);
@@ -85,12 +85,20 @@ export default function Perfil() {
       )}
 
       <section className="mt-7">
-        <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+        <label className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
           Nível
-        </p>
-        <div className="mt-3 rounded-2xl border-2 border-line bg-surface px-5 py-4 text-[1.2rem]">
-          {LEVEL_LABEL[p.level]}
-        </div>
+          <select
+            value={p.level}
+            onChange={(e) => setProfile({ level: e.target.value as LevelId })}
+            className="mt-3 block min-h-14 w-full rounded-2xl border-2 border-line bg-surface px-5 py-4 text-[1.2rem]"
+          >
+            {Object.entries(LEVEL_LABEL).map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <section className="mt-6">
@@ -127,7 +135,8 @@ export default function Perfil() {
                 }`}
               >
                 <button
-                  className="flex items-center gap-3"
+                  className="flex min-h-14 flex-1 items-center gap-3 text-left"
+                  aria-pressed={m.enabled}
                   onClick={() =>
                     setProfile({
                       moments: p.moments.map((x) =>
@@ -136,13 +145,14 @@ export default function Perfil() {
                     })
                   }
                 >
-                  <span className="text-[1.5rem]">{meta.emoji}</span>
+                  <span className="text-[1.5rem]" aria-hidden="true">{meta.emoji}</span>
                   <span className="text-[1.15rem] font-medium">{meta.label}</span>
                 </button>
                 <input
                   type="time"
                   value={m.time}
                   disabled={!m.enabled}
+                  aria-label={`Horário — ${meta.label}`}
                   onChange={(e) =>
                     setProfile({
                       moments: p.moments.map((x) =>
@@ -150,7 +160,7 @@ export default function Perfil() {
                       ),
                     })
                   }
-                  className="rounded-xl border border-line bg-surface px-2.5 py-2 text-[1.1rem] disabled:opacity-40"
+                  className="min-h-12 rounded-xl border border-line bg-surface px-2.5 py-2 text-[1.1rem] disabled:opacity-40"
                 />
               </div>
             );
@@ -168,13 +178,15 @@ export default function Perfil() {
           </p>
           {gcal === "on" ? (
             <div className="mt-3 flex items-center justify-between">
-              <p className="text-[1.15rem] font-medium">📅 Google Agenda conectada</p>
+              <p className="text-[1.15rem] font-medium">
+                <span aria-hidden="true">📅 </span>Google Agenda conectada
+              </p>
               <button
                 onClick={() => {
                   gcalDisconnect();
                   setGcal("off");
                 }}
-                className="text-[0.95rem] text-muted underline underline-offset-4"
+                className="min-h-11 px-3 text-[0.95rem] text-muted underline underline-offset-4"
               >
                 Desconectar
               </button>
@@ -182,15 +194,15 @@ export default function Perfil() {
           ) : googleConfigured() ? (
             <button
               onClick={() => (window.location.href = gcalConnectUrl())}
-              className="pop mt-3 w-full rounded-2xl border-2 border-accent bg-accent-soft px-5 py-3.5 text-[1.15rem] font-semibold active:scale-[0.98]"
+              className="pop mt-3 min-h-14 w-full rounded-2xl border-2 border-accent bg-accent-soft px-5 py-3.5 text-[1.15rem] font-semibold active:scale-[0.98]"
             >
               Conectar Google Agenda
             </button>
           ) : (
             <p className="mt-3 text-[1.05rem]">
-              📅 Usando agenda de demonstração
+              <span aria-hidden="true">📅 </span>Por enquanto usamos uma agenda de exemplo
               <span className="block text-[0.9rem] text-muted">
-                Configure NEXT_PUBLIC_GOOGLE_CLIENT_ID para conectar a sua.
+                A conexão com o Google Agenda ainda não está configurada neste aparelho.
               </span>
             </p>
           )}
@@ -205,8 +217,9 @@ export default function Perfil() {
           {CONFIDENCE.map((c) => (
             <button
               key={c.id}
+              aria-pressed={p.selfConfidence === c.id}
               onClick={() => setProfile({ selfConfidence: c.id })}
-              className={`rounded-2xl border-2 px-5 py-3.5 text-left text-[1.15rem] ${
+              className={`min-h-14 rounded-2xl border-2 px-5 py-3.5 text-left text-[1.15rem] ${
                 p.selfConfidence === c.id
                   ? "border-accent bg-accent-soft font-semibold"
                   : "border-line bg-surface"
@@ -222,7 +235,7 @@ export default function Perfil() {
         {!confirmReset ? (
           <button
             onClick={() => setConfirmReset(true)}
-            className="text-[1rem] text-muted underline underline-offset-4"
+            className="min-h-11 px-3 text-[1rem] text-muted underline underline-offset-4"
           >
             Recomeçar do zero
           </button>
@@ -235,6 +248,7 @@ export default function Perfil() {
               </BigButton>
               <BigButton
                 onClick={() => {
+                  gcalDisconnect();
                   reset();
                   router.replace("/onboarding");
                 }}

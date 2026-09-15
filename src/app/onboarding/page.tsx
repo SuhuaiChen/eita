@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BigButton from "@/components/BigButton";
 import { MOMENTS, TOPICS } from "@/lib/engine";
@@ -24,15 +24,22 @@ const STEPS = 5;
 
 export default function Onboarding() {
   const router = useRouter();
-  const { startProfile } = useLearner();
+  const { state, ready, startProfile } = useLearner();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [level, setLevel] = useState<LevelId | null>(null);
   const [interests, setInterests] = useState<TopicId[]>([]);
+  const [capHit, setCapHit] = useState(false);
   const [moments, setMoments] = useState<MomentSetting[]>(
     MOMENTS.map((m) => ({ id: m.id, time: m.defaultTime, enabled: true }))
   );
   const [confidence, setConfidence] = useState<SelfConfidence | null>(null);
+
+  // revisiting onboarding with an existing profile must not wipe progress —
+  // the reset flow lives in /perfil and calls reset() before coming here
+  useEffect(() => {
+    if (ready && state.profile) router.replace("/hoje");
+  }, [ready, state.profile, router]);
 
   const canNext =
     step === 0
@@ -44,6 +51,8 @@ export default function Onboarding() {
           : step === 3
             ? moments.some((m) => m.enabled)
             : confidence !== null;
+
+  if (!ready || state.profile) return null;
 
   function finish() {
     if (!level || !confidence) return;
@@ -90,6 +99,8 @@ export default function Onboarding() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Seu nome"
                 autoCapitalize="words"
+                autoComplete="given-name"
+                enterKeyHint="next"
                 className="mt-2 w-full rounded-2xl border-2 border-line bg-surface px-5 py-4 text-[1.3rem] outline-none focus:border-accent"
               />
             </label>
@@ -122,7 +133,9 @@ export default function Onboarding() {
             </h1>
             <p className="mt-2 text-[1.1rem] text-muted">
               Escolha de 3 a 5 assuntos.{" "}
-              <span className="font-semibold text-ink">{interests.length} escolhidos</span>
+              <span className="font-semibold text-ink">
+                {interests.length === 1 ? "1 escolhido" : `${interests.length} escolhidos`}
+              </span>
             </p>
             <div className="mt-6 grid grid-cols-2 gap-3">
               {TOPICS.map((t) => {
@@ -130,25 +143,33 @@ export default function Onboarding() {
                 return (
                   <button
                     key={t.id}
-                    onClick={() =>
-                      setInterests((prev) =>
-                        on
-                          ? prev.filter((x) => x !== t.id)
-                          : prev.length < 5
-                            ? [...prev, t.id]
-                            : prev
-                      )
-                    }
+                    aria-pressed={on}
+                    onClick={() => {
+                      if (on) {
+                        setCapHit(false);
+                        setInterests((prev) => prev.filter((x) => x !== t.id));
+                      } else if (interests.length < 5) {
+                        setCapHit(false);
+                        setInterests((prev) => [...prev, t.id]);
+                      } else {
+                        setCapHit(true);
+                      }
+                    }}
                     className={`min-h-16 rounded-2xl border-2 px-4 py-3 text-left text-[1.15rem] font-medium transition active:scale-[0.97] ${
                       on ? "border-accent bg-accent-soft" : "border-line bg-surface"
                     }`}
                   >
-                    <span className="mr-1.5">{t.emoji}</span>
+                    <span className="mr-1.5" aria-hidden="true">{t.emoji}</span>
                     {t.label}
                   </button>
                 );
               })}
             </div>
+            {capHit && (
+              <p className="rise mt-3 text-[1.05rem] font-medium text-hint" aria-live="polite">
+                Você já escolheu 5 — toque num assunto marcado para trocar.
+              </p>
+            )}
           </>
         )}
 
@@ -171,14 +192,15 @@ export default function Onboarding() {
                     }`}
                   >
                     <button
-                      className="flex items-center gap-3 text-left"
+                      className="flex min-h-14 flex-1 items-center gap-3 text-left"
+                      aria-pressed={m.enabled}
                       onClick={() =>
                         setMoments((ms) =>
                           ms.map((x, j) => (j === i ? { ...x, enabled: !x.enabled } : x))
                         )
                       }
                     >
-                      <span className="text-[1.6rem]">{meta.emoji}</span>
+                      <span className="text-[1.6rem]" aria-hidden="true">{meta.emoji}</span>
                       <span>
                         <span className="block text-[1.2rem] font-semibold">{meta.label}</span>
                         <span className="text-[1rem] text-muted">{meta.hint}</span>
@@ -188,12 +210,13 @@ export default function Onboarding() {
                       type="time"
                       value={m.time}
                       disabled={!m.enabled}
+                      aria-label={`Horário — ${meta.label}`}
                       onChange={(e) =>
                         setMoments((ms) =>
                           ms.map((x, j) => (j === i ? { ...x, time: e.target.value } : x))
                         )
                       }
-                      className="rounded-xl border border-line bg-surface px-2.5 py-2 text-[1.1rem] disabled:opacity-40"
+                      className="min-h-12 rounded-xl border border-line bg-surface px-2.5 py-2 text-[1.1rem] disabled:opacity-40"
                     />
                   </div>
                 );

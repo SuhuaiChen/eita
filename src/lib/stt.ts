@@ -1,7 +1,7 @@
 // zh-CN speech recognition via the Web Speech API (Chrome/Edge/Safari).
 // No key needed — the browser does the work. Returns null when unsupported.
 
-type RecResult = { transcript: string; final: boolean };
+type RecResult = { transcript: string; final: boolean; alts?: string[] };
 type RecCallbacks = {
   onResult: (r: RecResult) => void;
   onEnd?: () => void;
@@ -43,13 +43,18 @@ export function listen(cb: RecCallbacks): { stop: () => void } | null {
   rec.lang = "zh-CN";
   rec.interimResults = true;
   rec.continuous = false;
-  rec.maxAlternatives = 1;
+  rec.maxAlternatives = 3;
 
   rec.onresult = (e) => {
-    const ev = e as { results: { isFinal: boolean; 0: { transcript: string } }[]; resultIndex: number };
+    const ev = e as {
+      results: { isFinal: boolean; length: number; [i: number]: { transcript: string } }[];
+      resultIndex: number;
+    };
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
       const r = ev.results[i];
-      cb.onResult({ transcript: r[0].transcript, final: r.isFinal });
+      const alts: string[] = [];
+      for (let j = 0; j < r.length; j++) alts.push(r[j].transcript);
+      cb.onResult({ transcript: r[0].transcript, final: r.isFinal, alts });
     }
   };
   rec.onend = () => cb.onEnd?.();

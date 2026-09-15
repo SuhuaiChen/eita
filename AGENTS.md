@@ -34,8 +34,9 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
 - `src/lib/store.tsx` — learner state: localStorage + optional Supabase sync
   (`eita_state` table, see `supabase/schema.sql`; enabled by
   NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY).
-- `src/lib/tts.ts` — zh-CN speech: Ali DashScope `qwen3-tts-flash` via
-  `/api/tts` first, Web Speech API fallback (always used for 🐢 slow).
+- `src/lib/tts.ts` — zh-CN speech via the browser's Web Speech API
+  (`speechSynthesis`), picking the best available zh voice; 🐢 = slower rate.
+  There is no `/api/tts` route — the earlier DashScope plan was dropped.
 - `src/lib/calendar.ts` — agenda model: real Google Calendar events when a
   token is stored (implicit OAuth via `NEXT_PUBLIC_GOOGLE_CLIENT_ID`,
   redirect lands back on `/perfil`), otherwise a deterministic demo agenda
@@ -48,8 +49,8 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
   `/pratica?m=<moment>` or `?e=<agendaItemId>`, `/progresso` (vocab + grammar
   banks with dominance dots), `/perfil` (Google connect). `/` redirects.
 - Keys live in `.env.local` (gitignored): `OPENAI_API_KEY`, `OPENAI_MODEL`,
-  `DASHSCOPE_API_KEY` (intl endpoint: dashscope-intl.aliyuncs.com — the
-  mainland host rejects this key).
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (dedicated OAuth client in the `eita-app`
+  GCP project; redirect URIs `http://localhost:{3000,3001}/perfil`).
 
 ## Design rules worth keeping
 

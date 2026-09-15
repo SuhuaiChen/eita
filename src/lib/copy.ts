@@ -13,12 +13,13 @@ export const praise = {
     "Certo. Da próxima sai sem dica.",
   ],
   almost: ["Quase.", "Por pouco.", "Boa tentativa."],
-  again: ["Vamos tentar com uma ajuda.", "Olhe a dica e tente de novo."],
+  again: ["Vamos tentar com uma dica.", "Olhe a dica e tente de novo."],
   reveal: [
     "Tudo bem. A gente vê isso de novo depois.",
     "Sem pressa — essa volta em outro momento.",
   ],
-  recovery: ["Isso. Você lembrou de", "Viu? Você sabia."],
+  // {w} is replaced by the target word inline so the hanzi never orphans
+  recovery: ["Isso. Você lembrou de {w}.", "Viu? Você sabia: {w}."],
 };
 
 export const pick = <T,>(arr: T[]): T =>

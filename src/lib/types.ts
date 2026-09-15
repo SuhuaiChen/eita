@@ -164,6 +164,8 @@ export interface Interaction {
   type: string; // 'dialogue' | 'check'
   result: "ok" | "ok-help" | "fail";
   helpLevel: number; // hints used 0..3
+  /** the concept was unintroduced when this practice ran */
+  isNew?: boolean;
 }
 
 export interface LearnerState {

@@ -22,6 +22,12 @@ type Rendered = DialogueLine & { key: string; mine?: boolean };
 
 const isEita = (r: Rendered) => !r.mine;
 
+// hint ladder rungs: 1 gloss → 2 pattern (pinyin shape) → 3 starter → 4 reveal
+const MAX_HINT = 4;
+// N misses on one turn (voice/typed/wrong pick) → we call it a struggle and
+// move on gently — makes the recovery path reachable without punishing
+const MAX_MISSES = 3;
+
 export default function DialogueRunner({
   dialogue,
   recovery,
@@ -61,6 +67,10 @@ export default function DialogueRunner({
   const anyHelp = useRef(false);
   const anyFail = useRef(false);
   const hintsUsed = useRef(0);
+  const turnMisses = useRef(0);
+  const advancing = useRef(false);
+  const lastInterim = useRef("");
+  const scoredFinal = useRef(false);
   const overrides = useRef<Map<number, DialogueLine>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
   const onFinishRef = useRef(onFinish);
@@ -96,10 +106,10 @@ export default function DialogueRunner({
         setCheer(pickCelebration(out, learnerName));
         setFeedback(
           recovery && out !== "fail"
-            ? `${pick(praise.recovery)} ${targetWord()}.`
+            ? pick(praise.recovery).replace("{w}", targetWord())
             : pick(out === "ok" ? praise.solo : out === "ok-help" ? praise.helped : praise.reveal)
         );
-        onFinishRef.current(out, hintsUsed.current);
+        onFinishRef.current(out, Math.min(hintsUsed.current, MAX_HINT));
         setTimeout(() => setCheerFade(true), 1700);
       });
       return;
@@ -122,6 +132,12 @@ export default function DialogueRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, done]);
 
+  // a new turn re-arms the double-tap guard and the per-turn miss counter
+  useEffect(() => {
+    advancing.current = false;
+    turnMisses.current = 0;
+  }, [idx]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [shown.length, typing, awaitingReply]);
@@ -140,32 +156,65 @@ export default function DialogueRunner({
     setListening(false);
   }
 
+  function scoreSpeech(t: string, alts?: string[]) {
+    if (current?.role !== "learner") return;
+    const cands = alts?.length ? alts : [t];
+    const scored = current.replies
+      .flatMap((r, i) => cands.map((c) => ({ r, i, m: matchesReply(c, r) })))
+      .sort((a, b) => (b.m === "ok" ? 1 : b.m === "close" ? 0.5 : 0) - (a.m === "ok" ? 1 : a.m === "close" ? 0.5 : 0));
+    const best = scored[0];
+    if (best?.m === "ok") {
+      advanceWith(best.r, false);
+    } else if (best?.m === "close") {
+      // a near match is a real attempt — it counts as helped
+      anyHelp.current = true;
+      miss();
+      setFeedback("Quase! Ouça e tente de novo:");
+      speak(best.r.zh);
+    } else {
+      miss();
+      // one garbled capture isn't a learning signal — only mark the
+      // exercise "helped" when the misses repeat
+      if (turnMisses.current >= 2) anyHelp.current = true;
+      setFeedback("Não entendi bem — tente de novo ou toque numa resposta.");
+    }
+  }
+
+  /** a miss on this turn; after MAX_MISSES we reveal + move on as a soft fail */
+  function miss() {
+    turnMisses.current += 1;
+    if (turnMisses.current >= MAX_MISSES) revealAndAdvance();
+  }
+
   /** voice-first reply: match the transcript against this turn's options */
   function startListening() {
     if (current?.role !== "learner" || listening) return;
     setTranscript("");
+    lastInterim.current = "";
+    scoredFinal.current = false;
     setListening(true);
     const handle = listen({
-      onResult: ({ transcript: t, final }) => {
+      onResult: ({ transcript: t, final, alts }) => {
         setTranscript(t);
-        if (!final) return;
+        if (!final) {
+          lastInterim.current = t;
+          return;
+        }
+        scoredFinal.current = true;
         stopListening();
-        const scored = current.replies
-          .map((r, i) => ({ r, i, m: matchesReply(t, r) }))
-          .sort((a, b) => (b.m === "ok" ? 1 : b.m === "close" ? 0.5 : 0) - (a.m === "ok" ? 1 : a.m === "close" ? 0.5 : 0));
-        const best = scored[0];
-        if (best?.m === "ok") {
-          advanceWith(best.r, false);
-        } else if (best?.m === "close") {
-          anyHelp.current = true;
-          setFeedback("Quase! Ouça e tente de novo:");
-          speak(best.r.zh);
-        } else {
-          anyHelp.current = true;
-          setFeedback("Não entendi bem — tente de novo ou toque numa resposta.");
+        scoreSpeech(t, alts);
+      },
+      onEnd: () => {
+        setListening(false);
+        // seniors pause mid-sentence — if recognition ended without a final
+        // result, score whatever interim we captured instead of dropping it
+        if (!scoredFinal.current && lastInterim.current.trim()) {
+          const t = lastInterim.current;
+          lastInterim.current = "";
+          scoredFinal.current = true;
+          scoreSpeech(t);
         }
       },
-      onEnd: () => setListening(false),
       onError: () => {
         setListening(false);
         setFeedback("Não consegui ouvir — verifique o microfone ou toque numa resposta.");
@@ -173,14 +222,15 @@ export default function DialogueRunner({
     });
     if (!handle) {
       setListening(false);
-      setFeedback("Reconhecimento de voz indisponível — toque numa resposta.");
+      setFeedback("Não consigo ouvir sua voz neste aparelho — toque numa resposta.");
       return;
     }
     recRef.current = handle;
   }
 
   function pickReply(r: ReplyOption, i: number) {
-    if (!awaitingReply || current.role !== "learner") return;
+    if (!awaitingReply || current.role !== "learner" || advancing.current) return;
+    advancing.current = true;
     stopListening();
     if (current.kind === "check" && !r.ok) {
       // gentle miss — hint then retry, then reveal
@@ -193,12 +243,26 @@ export default function DialogueRunner({
         setFeedback("Sem problema — essa a gente repete depois.");
         advanceWith(r, true);
       } else {
+        miss();
         setHintLevel((h) => Math.max(h, 1));
         setFeedback(`${pick(praise.almost)} ${pick(praise.again)}`);
+        advancing.current = false;
       }
       return;
     }
     advanceWith(r, false);
+  }
+
+  /** "não sei" — reveal the suggested reply, then move on as a soft fail */
+  function revealAndAdvance() {
+    if (advancing.current || current?.role !== "learner") return;
+    advancing.current = true;
+    const r = current.replies.find((x) => x.ok) ?? current.replies[0];
+    anyFail.current = true;
+    setHintLevel(MAX_HINT);
+    setFeedback("Sem problema — olha como se diz:");
+    speak(r.zh);
+    setTimeout(() => advanceWith(r, true), 1600);
   }
 
   function advanceWith(r: ReplyOption, failed: boolean) {
@@ -219,7 +283,7 @@ export default function DialogueRunner({
   }
 
   function checkTyped() {
-    if (current?.role !== "learner") return;
+    if (current?.role !== "learner" || advancing.current) return;
     const results = current.replies.map((r, i) => ({
       r,
       i,
@@ -231,26 +295,30 @@ export default function DialogueRunner({
         pickReply(exact.r, exact.i);
         return;
       }
+      advancing.current = true;
       advanceWith(exact.r, false);
       return;
     }
     const close = results.find((x) => x.m === "close");
     if (close) {
       anyHelp.current = true;
+      miss();
       setFeedback("Quase — olhe de novo, ou toque numa resposta.");
       setTyped("");
       return;
     }
     anyHelp.current = true;
+    miss();
     setHintLevel((h) => Math.max(h, 1));
     setFeedback(`${pick(praise.almost)} ${pick(praise.again)}`);
     setTyped("");
   }
 
   function help() {
+    if (hintLevel >= MAX_HINT) return; // mashing 💡 shouldn't inflate helpLevel
     hintsUsed.current += 1;
     anyHelp.current = true;
-    setHintLevel((h) => Math.min(h + 1, 2));
+    setHintLevel((h) => Math.min(h + 1, MAX_HINT));
   }
 
   const targetGloss = useMemo(() => {
@@ -275,20 +343,32 @@ export default function DialogueRunner({
     );
   }, [learnerTurn, hintLevel, wrongIds]);
 
-  const revealCorrect = learnerTurn?.kind === "check" && hintLevel >= 2;
+  // the reply we'd suggest — first valid option
+  const suggested = useMemo(() => {
+    if (!learnerTurn) return null;
+    return learnerTurn.replies.find((r) => r.ok) ?? learnerTurn.replies[0] ?? null;
+  }, [learnerTurn]);
+
+  const revealIdx = hintLevel >= MAX_HINT && suggested ? learnerTurn!.replies.indexOf(suggested) : -1;
 
   const hintBox = useMemo(() => {
-    if (!learnerTurn || hintLevel === 0) return null;
+    if (!learnerTurn || hintLevel === 0 || !suggested) return null;
     if (learnerTurn.kind === "check" && targetGloss) {
-      return hintLevel >= 2
-        ? { title: "Resposta", text: `${targetGloss.w} = ${targetGloss.pt}` }
-        : { title: "Dica", text: `Como se diz: ${targetGloss.p}` };
+      if (hintLevel >= MAX_HINT) return { title: "Resposta", text: `${targetGloss.w} = ${targetGloss.pt}` };
+      if (hintLevel >= 2) return { title: "Começo", text: `${targetGloss.w.slice(0, 1)}…` };
+      return { title: "Dica", text: `Como se diz: ${targetGloss.p}` };
     }
-    const first = learnerTurn.replies[0];
-    return hintLevel >= 2
-      ? { title: "Você pode dizer", text: `${first.zh}\n${first.pt}` }
-      : { title: "Palavras-chave", text: glossesFor(first.words).map((g) => `${g.w} ${g.pt}`).join("  ·  ") };
-  }, [learnerTurn, hintLevel, targetGloss]);
+    if (hintLevel >= MAX_HINT)
+      return { title: "Você pode dizer", text: `${suggested.zh}\n${suggested.pt}` };
+    if (hintLevel === 3)
+      return { title: "Começo", text: `${suggested.words.slice(0, 2).join(" ")}…` };
+    if (hintLevel === 2)
+      return { title: "O som da frase", text: suggested.py || suggested.zh };
+    return {
+      title: "Palavras importantes",
+      text: glossesFor(suggested.words).map((g) => `${g.w} ${g.pt}`).join("  ·  "),
+    };
+  }, [learnerTurn, hintLevel, targetGloss, suggested]);
 
   // ---------- recap ----------
   const header = context
@@ -308,34 +388,34 @@ export default function DialogueRunner({
               className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 ${"mine" in l ? "bg-accent-soft" : "bg-paper"}`}
             >
               <div className={`min-w-0 flex-1 ${"mine" in l ? "text-right" : ""}`}>
-                <p className="zh text-[1.25rem] font-medium leading-snug">{l.zh}</p>
+                <p lang="zh-CN" className="zh text-[1.25rem] font-medium leading-snug">{l.zh}</p>
                 <p className="text-[0.95rem] text-muted">{l.pt}</p>
               </div>
               <button
                 onClick={() => speak(l.zh)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface/70 text-[0.95rem]"
-                aria-label="Ouvir"
+                className="flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-surface/70 text-[1rem]"
+                aria-label={`Ouvir ${l.zh}`}
               >
-                🔊
+                <span aria-hidden="true">🔊</span>
               </button>
             </div>
           ))}
         </div>
         {targetGloss && (
           <p className="mt-4 text-center text-[1.05rem] text-muted">
-            <span className="zh text-[1.3rem] font-semibold text-ink">{targetGloss.w}</span>
+            <span lang="zh-CN" className="zh text-[1.3rem] font-semibold text-ink">{targetGloss.w}</span>
             {targetGloss.p ? ` · ${targetGloss.p}` : ""} = {targetGloss.pt}
           </p>
         )}
         <div className="mt-6 space-y-3">
-          <BigButton big onClick={() => router.push("/hoje")}>
-            Pronto por agora
+          <BigButton big onClick={() => router.replace("/hoje")}>
+            Por hoje é só
           </BigButton>
           <button
             onClick={() => router.push(`/pratica?m=${dialogue.moment}&again=${Date.now()}`)}
-            className="w-full py-2 text-center text-[1rem] text-muted underline underline-offset-4"
+            className="w-full min-h-12 py-3 text-center text-[1rem] text-muted underline underline-offset-4"
           >
-            Praticar mais uma
+            Mais uma conversinha
           </button>
         </div>
       </Card>
@@ -362,20 +442,20 @@ export default function DialogueRunner({
                     )
                   }
                 />
-                <div className="mt-1.5 flex items-center gap-3">
+                <div className="mt-1.5 flex items-center gap-1.5">
                   <button
                     onClick={() => speak(l.zh)}
-                    className="text-[0.95rem] text-muted"
-                    aria-label="Ouvir"
+                    className="flex min-h-12 min-w-12 items-center justify-center rounded-full text-[1.05rem] text-muted active:bg-surface"
+                    aria-label={`Ouvir ${l.zh}`}
                   >
-                    🔊
+                    <span aria-hidden="true">🔊</span>
                   </button>
                   <button
                     onClick={() => speak(l.zh, { slow: true })}
-                    className="text-[0.95rem] text-muted"
-                    aria-label="Ouvir devagar"
+                    className="flex min-h-12 min-w-12 items-center justify-center rounded-full text-[1.05rem] text-muted active:bg-surface"
+                    aria-label={`Ouvir devagar ${l.zh}`}
                   >
-                    🐢
+                    <span aria-hidden="true">🐢</span>
                   </button>
                   {l.pt && (
                     <button
@@ -387,9 +467,9 @@ export default function DialogueRunner({
                           return n;
                         })
                       }
-                      className="text-[0.85rem] text-muted underline underline-offset-2"
+                      className="min-h-12 rounded-xl px-3 text-[0.95rem] text-muted underline underline-offset-2"
                     >
-                      {showPt.has(l.key) ? "esconder" : "tradução"}
+                      {showPt.has(l.key) ? "Esconder" : "Ver tradução"}
                     </button>
                   )}
                 </div>
@@ -401,7 +481,7 @@ export default function DialogueRunner({
           ) : (
             <div key={l.key} className="rise flex justify-end">
               <div className="max-w-[88%] rounded-2xl rounded-tr-md bg-accent px-4 py-3 text-white">
-                <p className="zh text-[1.5rem] font-medium leading-snug">{l.zh}</p>
+                <p lang="zh-CN" className="zh text-[1.5rem] font-medium leading-snug">{l.zh}</p>
                 <p className="mt-0.5 text-[0.95rem] opacity-85">{l.pt}</p>
               </div>
             </div>
@@ -410,7 +490,7 @@ export default function DialogueRunner({
         {typing && (
           <div className="flex justify-start">
             <div className="rounded-2xl rounded-tl-md bg-paper px-4 py-3 text-muted">
-              <span className="inline-flex gap-1">
+              <span className="inline-flex gap-1" aria-hidden="true">
                 <i className="animate-pulse">●</i>
                 <i className="animate-pulse [animation-delay:150ms]">●</i>
                 <i className="animate-pulse [animation-delay:300ms]">●</i>
@@ -429,23 +509,25 @@ export default function DialogueRunner({
             </p>
             <button
               onClick={help}
-              className="min-h-10 rounded-full bg-hint-soft px-4 text-[0.95rem] font-medium text-hint"
+              className="min-h-12 rounded-full bg-hint-soft px-5 text-[1rem] font-medium text-hint"
             >
               💡 Me ajude
             </button>
           </div>
 
-          {hintBox && (
-            <div className="rise mt-3 rounded-2xl bg-hint-soft p-3.5">
-              <p className="text-[0.85rem] font-semibold uppercase tracking-wide text-hint">
-                {hintBox.title}
-              </p>
-              <p className="zh mt-1 whitespace-pre-line text-[1.15rem]">{hintBox.text}</p>
-            </div>
-          )}
-          {feedback && (
-            <p className="rise mt-3 text-[1.05rem] font-medium text-hint">{feedback}</p>
-          )}
+          <div aria-live="polite">
+            {hintBox && (
+              <div className="rise mt-3 rounded-2xl bg-hint-soft p-3.5">
+                <p className="text-[0.9rem] font-semibold uppercase tracking-wide text-hint">
+                  {hintBox.title}
+                </p>
+                <p lang="zh-CN" className="zh mt-1 whitespace-pre-line text-[1.15rem]">{hintBox.text}</p>
+              </div>
+            )}
+            {feedback && (
+              <p className="rise mt-3 text-[1.05rem] font-medium text-hint">{feedback}</p>
+            )}
+          </div>
 
           {/* voice-first reply on choice turns */}
           {learnerTurn.kind === "choice" && speechSupported() && !typeMode && (
@@ -458,11 +540,11 @@ export default function DialogueRunner({
                     : "border-2 border-accent bg-accent-soft text-ink"
                 }`}
               >
-                <span className="text-[1.5rem]">{listening ? "⏹" : "🎤"}</span>
+                <span className="text-[1.5rem]" aria-hidden="true">{listening ? "⏹" : "🎤"}</span>
                 {listening ? "Ouvindo… toque para parar" : "Falar minha resposta"}
               </button>
               {transcript && (
-                <p className="zh mt-2 text-center text-[1.2rem] text-muted">{transcript}</p>
+                <p lang="zh-CN" className="zh mt-2 text-center text-[1.2rem] text-muted" aria-live="polite">{transcript}</p>
               )}
               <p className="mt-2 text-center text-[0.9rem] text-muted">
                 ou toque numa resposta abaixo
@@ -474,10 +556,10 @@ export default function DialogueRunner({
             <div className="mt-3 grid gap-2.5">
               {visibleReplies.map((r) => {
                 const i = learnerTurn.replies.indexOf(r);
-                const reveal = revealCorrect && r.ok;
+                const reveal = i === revealIdx;
                 return (
                   <button
-                    key={i}
+                    key={r.zh}
                     onClick={() => pickReply(r, i)}
                     className={`pop min-h-14 w-full rounded-2xl border-2 px-4 py-3 text-left transition active:scale-[0.98] ${
                       reveal
@@ -492,7 +574,7 @@ export default function DialogueRunner({
                         <span className="py-big block text-[1.35rem] leading-snug">
                           {r.py}
                         </span>
-                        <span className="zh block text-[1.3rem] font-medium leading-snug">
+                        <span lang="zh-CN" className="zh block text-[1.3rem] font-medium leading-snug">
                           {r.zh}
                         </span>
                         <span className="block text-[0.95rem] text-muted">
@@ -503,12 +585,22 @@ export default function DialogueRunner({
                   </button>
                 );
               })}
-              <button
-                onClick={() => setTypeMode(true)}
-                className="mt-1 text-center text-[0.95rem] text-muted underline underline-offset-4"
-              >
-                Prefiro escrever
-              </button>
+              <div className="mt-1 flex items-center justify-between">
+                <button
+                  onClick={() => setTypeMode(true)}
+                  className="min-h-12 rounded-xl px-3 text-[1rem] text-muted underline underline-offset-4"
+                >
+                  Prefiro escrever
+                </button>
+                {learnerTurn.kind === "choice" && (
+                  <button
+                    onClick={revealAndAdvance}
+                    className="min-h-12 rounded-xl px-3 text-[1rem] text-muted underline underline-offset-4"
+                  >
+                    Não sei ainda
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="mt-4">
@@ -517,7 +609,7 @@ export default function DialogueRunner({
                 onChange={(e) => setTyped(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && typed.trim() && checkTyped()}
                 placeholder="Escreva em chinês ou pinyin…"
-                lang="zh"
+                lang="zh-CN"
                 autoCapitalize="off"
                 autoCorrect="off"
                 autoFocus
@@ -554,7 +646,7 @@ function Card({
       <div className="flex items-center justify-between">
         <button
           onClick={onExit}
-          className="rounded-full px-3 py-1.5 text-[1.05rem] text-muted active:bg-line"
+          className="min-h-11 rounded-full px-4 py-2.5 text-[1.05rem] text-muted active:bg-line"
         >
           ← voltar
         </button>
@@ -576,12 +668,12 @@ const POS_STYLE: Record<string, { fg: string; bg: string; label: string }> = {
   numeral: { fg: "text-[#7a5195]", bg: "bg-[#f0e8f6]", label: "numeral" },
   classificador: { fg: "text-[#7a5195]", bg: "bg-[#f0e8f6]", label: "classificador" },
   "numeral-classificador": { fg: "text-[#7a5195]", bg: "bg-[#f0e8f6]", label: "numeral" },
-  adjetivo: { fg: "text-[#b0526b]", bg: "bg-[#f8e6ec]", label: "adjetivo" },
+  adjetivo: { fg: "text-[#a13e58]", bg: "bg-[#f8e6ec]", label: "adjetivo" },
   "advérbio": { fg: "text-hint", bg: "bg-hint-soft", label: "advérbio" },
-  "partícula": { fg: "text-muted", bg: "bg-line", label: "partícula" },
-  "preposição": { fg: "text-[#2f7d7a]", bg: "bg-[#e2f0ef]", label: "preposição" },
-  "conjunção": { fg: "text-[#2f7d7a]", bg: "bg-[#e2f0ef]", label: "conjunção" },
-  "expressão": { fg: "text-accent", bg: "bg-accent-soft", label: "expressão" },
+  "partícula": { fg: "text-ink", bg: "bg-line", label: "partícula" },
+  "preposição": { fg: "text-[#226360]", bg: "bg-[#e2f0ef]", label: "preposição" },
+  "conjunção": { fg: "text-[#226360]", bg: "bg-[#e2f0ef]", label: "conjunção" },
+  "expressão": { fg: "text-accent-deep", bg: "bg-accent-soft", label: "expressão" },
 };
 const POS_DEFAULT = { fg: "text-ink", bg: "bg-surface", label: "" };
 
@@ -605,17 +697,18 @@ function WordChips({
             <button
               key={i}
               onClick={() => onSel(i)}
-              className={`flex flex-col items-center rounded-lg px-1.5 pb-0.5 pt-1 ${st.bg} ${
+              aria-label={`${g.w} — significado`}
+              className={`flex min-h-12 min-w-12 flex-col items-center justify-center rounded-lg px-2 pb-1 pt-1.5 ${st.bg} ${
                 sel?.key === line.key && sel.i === i
                   ? "ring-2 ring-accent"
                   : ""
               }`}
             >
-              <span className={`zh text-[1.35rem] font-semibold leading-tight ${st.fg}`}>
+              <span lang="zh-CN" className={`zh text-[1.35rem] font-semibold leading-tight ${st.fg}`}>
                 {g.w}
               </span>
               {short && (
-                <span className="max-w-20 truncate text-[0.68rem] leading-tight text-muted">
+                <span className="max-w-20 truncate text-[0.75rem] leading-tight text-muted">
                   {short}
                 </span>
               )}
@@ -625,7 +718,7 @@ function WordChips({
       </div>
       {sel?.key === line.key && glosses[sel.i] && (
         <div className="rise mt-2 rounded-xl border border-line bg-surface px-3 py-2 text-[0.95rem]">
-          <span className="zh font-semibold">{glosses[sel.i].w}</span>
+          <span lang="zh-CN" className="zh font-semibold">{glosses[sel.i].w}</span>
           {glosses[sel.i].p && <span className="py-big ml-1.5">{glosses[sel.i].p}</span>}
           <span className="ml-1.5">= {glosses[sel.i].pt || "—"}</span>
           {(POS_STYLE[vocabById.get(`v:${glosses[sel.i].w}`)?.pos ?? ""]?.label ?? "") && (

@@ -78,13 +78,14 @@ export default function Progresso() {
             return (
               <div key={i} className="flex flex-col items-center gap-1">
                 <span
+                  aria-label={`${d.count} ${d.count === 1 ? "conversinha" : "conversinhas"}`}
                   className={`flex h-8 w-8 items-center justify-center rounded-full text-[0.95rem] font-semibold ${
                     d.count > 0 ? "bg-jade text-white" : "bg-surface text-muted"
                   }`}
                 >
                   {d.count > 0 ? d.count : "·"}
                 </span>
-                <span className="text-[0.8rem] text-muted">{dayNames[wd]}</span>
+                <span className="text-[0.8rem] text-muted" aria-hidden="true">{dayNames[wd]}</span>
               </div>
             );
           })}
@@ -106,7 +107,7 @@ export default function Progresso() {
             return (
               <div key={id} className="flex items-center gap-3 px-4 py-3">
                 <div className="w-20 shrink-0">
-                  <p className="zh text-[1.5rem] font-medium leading-tight">{v.w}</p>
+                  <p lang="zh-CN" className="zh text-[1.5rem] font-medium leading-tight">{v.w}</p>
                   <p className="py text-[0.9rem]">{v.p}</p>
                 </div>
                 <p className="min-w-0 flex-1 truncate text-[1rem] text-muted">{v.pt}</p>
@@ -116,10 +117,10 @@ export default function Progresso() {
                 </div>
                 <button
                   onClick={() => speak(v.w)}
-                  className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper text-[1.05rem] active:bg-line"
+                  className="ml-1 flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-paper text-[1.05rem] active:bg-line"
                   aria-label={`Ouvir ${v.w}`}
                 >
-                  🔊
+                  <span aria-hidden="true">🔊</span>
                 </button>
               </div>
             );
@@ -128,7 +129,7 @@ export default function Progresso() {
         {bank.vocab.length > 12 && (
           <button
             onClick={() => setShowAllV((x) => !x)}
-            className="mt-2 w-full py-2 text-center text-[1rem] text-muted underline underline-offset-4"
+            className="mt-2 min-h-12 w-full py-3 text-center text-[1rem] text-muted underline underline-offset-4"
           >
             {showAllV ? "Mostrar menos" : `Ver todas as ${bank.vocab.length}`}
           </button>
@@ -156,7 +157,7 @@ export default function Progresso() {
               <div key={id} className="flex items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-[1.1rem] font-medium leading-tight">
-                    <span className="zh">{n.label}</span>
+                    <span lang="zh-CN" className="zh">{n.label}</span>
                     <span className="text-muted"> · {n.pt}</span>
                   </p>
                   <p className="truncate text-[0.9rem] text-muted">{n.ptn}</p>
@@ -167,10 +168,10 @@ export default function Progresso() {
                 </div>
                 <button
                   onClick={() => speak(n.exs[0]?.hz ?? n.label)}
-                  className="ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper text-[1.05rem] active:bg-line"
+                  className="ml-1 flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-full bg-paper text-[1.05rem] active:bg-line"
                   aria-label={`Ouvir exemplo de ${n.label}`}
                 >
-                  🔊
+                  <span aria-hidden="true">🔊</span>
                 </button>
               </div>
             );
@@ -179,7 +180,7 @@ export default function Progresso() {
         {bank.gram.length > 10 && (
           <button
             onClick={() => setShowAllG((x) => !x)}
-            className="mt-2 w-full py-2 text-center text-[1rem] text-muted underline underline-offset-4"
+            className="mt-2 min-h-12 w-full py-3 text-center text-[1rem] text-muted underline underline-offset-4"
           >
             {showAllG ? "Mostrar menos" : `Ver todas as ${bank.gram.length}`}
           </button>

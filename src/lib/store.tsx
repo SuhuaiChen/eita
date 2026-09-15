@@ -14,6 +14,7 @@ import { initState } from "./engine";
 import { deviceId, getSupabase } from "./supabase";
 
 const KEY = "eita:state:v1";
+const BAK = "eita:state:v1:bak";
 
 const empty: LearnerState = {
   profile: null,
@@ -26,15 +27,27 @@ const empty: LearnerState = {
   lastSeenVersion: 1,
 };
 
+/** shape check — a corrupted blob should never silently wipe progress */
+function valid(s: LearnerState): boolean {
+  if (!s || typeof s !== "object") return false;
+  if (s.profile !== null && (typeof s.profile !== "object" || typeof s.profile.name !== "string"))
+    return false;
+  if (!s.concepts || typeof s.concepts !== "object" || Array.isArray(s.concepts)) return false;
+  return Array.isArray(s.interactions);
+}
+
 function load(): LearnerState {
   if (typeof window === "undefined") return empty;
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return empty;
-    return { ...empty, ...(JSON.parse(raw) as LearnerState) };
-  } catch {
-    return empty;
+  // primary first, then the backup of the previous good snapshot
+  for (const k of [KEY, BAK]) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = { ...empty, ...(JSON.parse(raw) as LearnerState) };
+      if (valid(parsed)) return parsed;
+    } catch {}
   }
+  return empty;
 }
 
 interface Store {
@@ -68,15 +81,21 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback((s: LearnerState) => {
     try {
+      // keep the last good snapshot as a fallback before overwriting
+      const prev = localStorage.getItem(KEY);
+      if (prev) localStorage.setItem(BAK, prev);
       localStorage.setItem(KEY, JSON.stringify(s));
     } catch {}
     const sb = getSupabase();
     if (sb) {
       if (syncTimer.current) clearTimeout(syncTimer.current);
       syncTimer.current = setTimeout(() => {
-        sb.from("eita_state")
-          .upsert({ id: deviceId(), json: s, updated_at: new Date().toISOString() })
-          .then(() => {});
+        try {
+          Promise.resolve(
+            sb.from("eita_state")
+              .upsert({ id: deviceId(), json: s, updated_at: new Date().toISOString() })
+          ).then(() => {}, () => {});
+        } catch {}
       }, 800);
     }
   }, []);
@@ -102,10 +121,22 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const reset = useCallback(() => {
+    // cancel any pending sync first — it would resurrect the old state remotely
+    if (syncTimer.current) {
+      clearTimeout(syncTimer.current);
+      syncTimer.current = null;
+    }
     setState(empty);
     try {
       localStorage.removeItem(KEY);
+      localStorage.removeItem(BAK);
     } catch {}
+    const sb = getSupabase();
+    if (sb) {
+      try {
+        Promise.resolve(sb.from("eita_state").delete().eq("id", deviceId())).catch(() => {});
+      } catch {}
+    }
   }, []);
 
   const value = useMemo(

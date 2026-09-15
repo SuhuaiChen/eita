@@ -2,7 +2,7 @@
 // Returns null on any failure — callers fall back to scripted dialogues.
 // Prefetched when the agenda renders so the tap feels instant.
 import type { AgendaItem } from "./calendar";
-import { knownWords, momentById, segment, vocabById } from "./engine";
+import { conceptOf, curriculum, knownWords, momentById, segment } from "./engine";
 import type { Dialogue, LearnerState } from "./types";
 
 const pending = new Map<string, Promise<Dialogue | null>>();
@@ -28,13 +28,11 @@ async function request(
   timeoutMs: number
 ): Promise<Dialogue | null> {
   const target = ev.topic;
-  const topical = Object.keys(state.concepts).find(
-    (id) =>
-      id.startsWith("v:") &&
-      vocabById.get(id)?.topics.includes(target) &&
-      !state.concepts[id].intro
+  // an unintroduced topical word anchors the generated dialogue — scan the
+  // curriculum, not state.concepts (which only ever holds introduced ids)
+  const v = curriculum.vocab.find(
+    (v) => v.topics.includes(target) && !conceptOf(state, v.id).intro
   );
-  const v = topical ? vocabById.get(topical) : undefined;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

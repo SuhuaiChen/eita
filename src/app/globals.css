@@ -9,14 +9,16 @@
   --color-accent: #c2402a;
   --color-accent-deep: #a03220;
   --color-accent-soft: #f7e4dc;
-  --color-jade: #3f7d54;
+  --color-jade: #35714b;
   --color-jade-soft: #e3f0e5;
-  --color-hint: #9a6b12;
+  --color-hint: #8a5f0e;
   --color-hint-soft: #f9efd8;
 }
 
 html {
-  font-size: 19px;
+  /* ~19px at the default 16px root — keeps the senior-friendly base while
+     still respecting a larger browser font-size setting */
+  font-size: 118.75%;
 }
 
 body {
@@ -149,4 +151,35 @@ body {
 }
 .cheer-fade {
   animation: cheer-fade 0.3s ease-in both;
+}
+
+/* ---------- accessibility ---------- */
+
+/* keyboard users need to see where they are — the app is otherwise mouse/touch-styled */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* seniors and motion-sensitive users: content just appears, no motion */
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pop,
+  .cheer-in,
+  .stamp-in,
+  .glow-pulse,
+  .confetti,
+  .cheer-fade,
+  .animate-pulse {
+    animation: none !important;
+  }
+  * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

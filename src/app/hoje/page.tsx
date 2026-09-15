@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import BigButton from "@/components/BigButton";
 import { useLearner } from "@/lib/store";
-import { momentById, pickPractice } from "@/lib/engine";
+import { dayKey, momentById, pickPractice, type Practice } from "@/lib/engine";
 import { currentMoment, fmtTime } from "@/lib/moments";
 import { cachePractice } from "@/lib/sessionCache";
 import { getAgenda, isLive, type AgendaItem } from "@/lib/calendar";
@@ -16,18 +16,40 @@ import { speak } from "@/lib/tts";
 export default function Hoje() {
   const { state, ready } = useLearner();
   const router = useRouter();
-  const now = useMemo(() => new Date(), []);
+  const [now, setNow] = useState(() => new Date());
   const [agenda, setAgenda] = useState<{ items: AgendaItem[]; source: string } | null>(null);
+  const [practice, setPractice] = useState<Practice | null>(null);
+  const hasProfile = !!state.profile;
 
   useEffect(() => {
     if (ready && !state.profile) router.replace("/onboarding");
   }, [ready, state.profile, router]);
+
+  // keep "now" live so Conversar appears/expires and moments roll over while
+  // the page stays open
+  useEffect(() => {
+    const tick = () => setNow(new Date());
+    const id = setInterval(tick, 30_000);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", tick);
+    };
+  }, []);
 
   const cm = useMemo(
     () => (state.profile ? currentMoment(state.profile.moments, now) : null),
     [state.profile, now]
   );
 
+  // refetch the agenda at most every ~2min (ticks alone shouldn't hammer the
+  // Google API), not on every render
+  const agendaKey = Math.floor(now.getTime() / 120_000);
   useEffect(() => {
     if (!state.profile) return;
     let dead = false;
@@ -42,21 +64,21 @@ export default function Hoje() {
       dead = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.profile, now]);
+  }, [hasProfile, agendaKey]);
 
   // the practice previewed on the card — cached so /pratica runs the same one
-  const practice = useMemo(() => {
-    if (!state.profile || !cm) return null;
+  useEffect(() => {
+    if (!state.profile || !cm) return;
     const p = pickPractice(state, cm.id, now.getTime());
     if (p) cachePractice(cm.id, p);
-    return p;
+    queueMicrotask(() => setPractice(p));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.profile, cm?.id, state.interactions.length]);
+  }, [hasProfile, cm?.id, state.interactions.length]);
 
   if (!ready || !state.profile) return null;
 
   const meta = cm ? momentById(cm.id) : null;
-  const todayKey = now.toISOString().slice(0, 10);
+  const todayKey = dayKey(now);
   const doneToday = state.dailyDone[todayKey]?.length ?? 0;
   const alreadyDid = cm && state.dailyDone[todayKey]?.includes(cm.id);
 
@@ -68,12 +90,12 @@ export default function Hoje() {
 
       {cm && meta && (
         <section className="mt-7">
-          <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+          <h2 className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
             {cm.status === "now" ? "Agora" : cm.status === "soon" ? `Em breve · ${fmtTime(cm.at)}` : `Amanhã · ${fmtTime(cm.at)}`}
-          </p>
+          </h2>
           <div className="rise mt-3 rounded-3xl bg-surface p-6 shadow-[0_6px_30px_rgba(60,40,20,0.08)]">
             <div className="flex items-center gap-3">
-              <span className="text-[2rem]">{meta.emoji}</span>
+              <span className="text-[2rem]" aria-hidden="true">{meta.emoji}</span>
               <div>
                 <p className="text-[1.25rem] font-semibold">{meta.label}</p>
                 <p className="text-[1rem] text-muted">uma conversinha · ~30 segundos</p>
@@ -81,7 +103,7 @@ export default function Hoje() {
             </div>
             {practice && (
               <div className="mt-5 text-center">
-                <p className="zh text-[1.9rem] font-semibold leading-snug">
+                <p lang="zh-CN" className="zh text-[1.9rem] font-semibold leading-snug">
                   {practice.previewZh}
                 </p>
                 {practice.previewPy && (
@@ -104,7 +126,7 @@ export default function Hoje() {
                 big
                 onClick={() => router.push(`/pratica?m=${cm.id}`)}
               >
-                {alreadyDid ? "Praticar de novo" : "Responder"}
+                {alreadyDid ? "Conversar de novo" : "Conversar"}
               </BigButton>
             </div>
           </div>
@@ -113,12 +135,12 @@ export default function Hoje() {
 
       <section className="mt-8">
         <div className="flex items-baseline justify-between">
-          <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+          <h2 className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
             Sua agenda hoje
-          </p>
+          </h2>
           {agenda && (
             <p className="text-[0.85rem] text-muted">
-              {agenda.source === "google" ? "Google Agenda" : "demonstração"}
+              {agenda.source === "google" ? "Google Agenda" : "agenda de exemplo"}
             </p>
           )}
         </div>
@@ -133,11 +155,11 @@ export default function Hoje() {
                   live
                     ? "border-accent/60 bg-surface shadow-[0_4px_20px_rgba(200,90,30,0.12)]"
                     : past
-                      ? "border-line bg-surface/60 opacity-55"
+                      ? "border-line bg-surface/60 opacity-70"
                       : "border-line bg-surface"
                 }`}
               >
-                <span className="text-[1.5rem]">{ev.emoji}</span>
+                <span className="text-[1.5rem]" aria-hidden="true">{ev.emoji}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[1.15rem] font-medium">{ev.title}</p>
                   <p className="text-[0.95rem] text-muted">{fmtTime(ev.start)}</p>
@@ -145,7 +167,7 @@ export default function Hoje() {
                 {live ? (
                   <button
                     onClick={() => router.push(`/pratica?e=${encodeURIComponent(ev.id)}`)}
-                    className="pop min-h-12 shrink-0 rounded-2xl bg-accent px-5 text-[1.05rem] font-semibold text-white active:scale-[0.97]"
+                    className="pop min-h-14 shrink-0 rounded-2xl bg-accent px-5 text-[1.05rem] font-semibold text-white active:scale-[0.97]"
                   >
                     Conversar
                   </button>
