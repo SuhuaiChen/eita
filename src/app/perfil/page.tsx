@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Shell from "@/components/Shell";
 import BigButton from "@/components/BigButton";
@@ -10,11 +11,19 @@ import {
   gcalConnectUrl,
   gcalConsumeRedirect,
   gcalDisconnect,
-  gcalToken,
+  gcalLinked,
   googleConfigured,
 } from "@/lib/calendar";
 import type { LevelId, SelfConfidence } from "@/lib/types";
 import { loadPrefs, savePrefs, type Prefs } from "@/lib/prefs";
+import { authEnabled, sendMagicLink, signOut } from "@/lib/auth";
+import { track } from "@/lib/telemetry";
+import {
+  notificationsSupported,
+  remindersOn,
+  enableReminders,
+  disableReminders,
+} from "@/lib/reminders";
 
 const LEVEL_LABEL: Record<LevelId, string> = {
   beginner: "Estou começando",
@@ -30,20 +39,26 @@ const CONFIDENCE: { id: SelfConfidence; label: string }[] = [
 ];
 
 export default function Perfil() {
-  const { state, ready, update, reset } = useLearner();
+  const { state, ready, update, reset, userEmail } = useLearner();
   const router = useRouter();
   const [confirmReset, setConfirmReset] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
   const [gcal, setGcal] = useState<"off" | "on">("off");
   const [prefs, setPrefs] = useState<Prefs>({ fontSize: "normal", highContrast: false });
+  const [email, setEmail] = useState("");
+  const [linkSent, setLinkSent] = useState<null | "sent" | "err">(null);
+  const [remind, setRemind] = useState(false);
 
   useEffect(() => {
     if (ready && !state.profile) router.replace("/onboarding");
     // returning from Google's OAuth redirect?
-    queueMicrotask(() => {
-      setGcal(gcalConsumeRedirect() || gcalToken() ? "on" : "off");
+    queueMicrotask(async () => {
+      const back = await gcalConsumeRedirect();
+      setGcal(back || gcalLinked() ? "on" : "off");
+      if (back) track("gcal.connected");
       setPrefs(loadPrefs());
+      setRemind(remindersOn());
     });
   }, [ready, state.profile, router]);
 
@@ -177,6 +192,71 @@ export default function Perfil() {
         </div>
       </section>
 
+      {authEnabled() && (
+        <section className="mt-6">
+          <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+            Sua conta
+          </p>
+          <div className="mt-3 rounded-2xl border-2 border-line bg-surface px-5 py-4">
+            {userEmail ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="min-w-0 flex-1 text-[1.05rem]">
+                  <span aria-hidden="true">✉️ </span>
+                  <span className="font-medium">{userEmail}</span>
+                  <span className="block text-[0.9rem] text-muted">
+                    Seu progresso está salvo na sua conta.
+                  </span>
+                </p>
+                <button
+                  onClick={() => signOut()}
+                  className="min-h-11 shrink-0 px-3 text-[0.95rem] text-muted underline underline-offset-4"
+                >
+                  Sair
+                </button>
+              </div>
+            ) : linkSent === "sent" ? (
+              <p className="text-[1.05rem]">
+                <span aria-hidden="true">📬 </span>
+                Enviamos um link para <b>{email}</b> — abra o e-mail neste aparelho e toque no link.
+              </p>
+            ) : (
+              <>
+                <p className="text-[1.05rem] text-muted">
+                  Entre com seu e-mail para guardar o progresso na sua conta — útil se trocar de aparelho.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="seu@email.com"
+                    aria-label="Seu e-mail"
+                    className="min-w-0 flex-1 rounded-2xl border-2 border-line bg-surface px-4 py-3 text-[1.15rem] outline-none focus:border-accent"
+                  />
+                  <BigButton
+                    className="!w-auto shrink-0 px-5"
+                    disabled={!/^\S+@\S+\.\S+$/.test(email)}
+                    onClick={async () => {
+                      const err = await sendMagicLink(email.trim());
+                      setLinkSent(err ? "err" : "sent");
+                    }}
+                  >
+                    Entrar
+                  </BigButton>
+                </div>
+                {linkSent === "err" && (
+                  <p className="mt-2 text-[0.95rem] text-hint">
+                    Não conseguimos enviar o link — confira o e-mail e tente de novo.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
       <section className="mt-6">
         <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
           Aparência
@@ -209,6 +289,38 @@ export default function Perfil() {
         </div>
       </section>
 
+      {notificationsSupported() && (
+        <section className="mt-6">
+          <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+            Lembretes
+          </p>
+          <div className="mt-3 space-y-2.5">
+            <button
+              aria-pressed={remind}
+              onClick={async () => {
+                if (remind) {
+                  disableReminders();
+                  setRemind(false);
+                } else {
+                  const ok = await enableReminders();
+                  setRemind(ok);
+                }
+              }}
+              className={`flex min-h-14 w-full items-center justify-between rounded-2xl border-2 px-5 py-3.5 text-left ${
+                remind ? "border-accent bg-accent-soft" : "border-line bg-surface"
+              }`}
+            >
+              <span className="text-[1.15rem] font-medium">🔔 Avisar na hora</span>
+              <span className="text-[0.95rem] text-muted">{remind ? "ligado" : "desligado"}</span>
+            </button>
+            <p className="px-1 text-[0.9rem] text-muted">
+              Avisa quando chega a hora de uma conversinha, enquanto o app estiver
+              aberto no aparelho. Sem e-mails nem mensagens.
+            </p>
+          </div>
+        </section>
+      )}
+
       <section className="mt-6">
         <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
           Sua agenda
@@ -225,6 +337,7 @@ export default function Perfil() {
               <button
                 onClick={() => {
                   gcalDisconnect();
+                  track("gcal.disconnect");
                   setGcal("off");
                 }}
                 className="min-h-11 px-3 text-[0.95rem] text-muted underline underline-offset-4"
@@ -234,7 +347,10 @@ export default function Perfil() {
             </div>
           ) : googleConfigured() ? (
             <button
-              onClick={() => (window.location.href = gcalConnectUrl())}
+              onClick={() => {
+                track("gcal.connect.start");
+                window.location.href = gcalConnectUrl();
+              }}
               className="pop mt-3 min-h-14 w-full rounded-2xl border-2 border-accent bg-accent-soft px-5 py-3.5 text-[1.15rem] font-semibold active:scale-[0.98]"
             >
               Conectar Google Agenda
@@ -301,6 +417,10 @@ export default function Perfil() {
         )}
         <p className="mt-6 text-[0.9rem] text-muted">
           Eita · demonstração de hackathon. Currículo: HanFlow HSK 1–2.
+          {" · "}
+          <Link href="/privacidade" className="underline underline-offset-4">
+            Privacidade
+          </Link>
         </p>
       </section>
     </Shell>

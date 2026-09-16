@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { segment } from "@/lib/engine";
+import {
+  boundedStr,
+  boundedStrs,
+  clientKey,
+  rateLimit,
+  sweepBuckets,
+} from "@/lib/apiGuard";
 import type { Dialogue, DialogueTurn, MomentId } from "@/lib/types";
+
+const VALID_MOMENTS = new Set(["cafe", "almoco", "tarde", "noite"]);
 
 // Generates a personalized micro-dialogue via OpenAI (gpt-5-mini by default).
 // The client falls back to the scripted/generated dialogues on any failure.
@@ -8,27 +17,23 @@ export async function POST(req: NextRequest) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return NextResponse.json({ error: "no key" }, { status: 503 });
 
-  const body = (await req.json().catch(() => ({}))) as {
-    moment?: MomentId;
-    momentLabel?: string;
-    eventTitle?: string;
-    eventWhen?: string;
-    targetWord?: string;
-    targetPt?: string;
-    knownWords?: string[];
-    interests?: string[];
-    learnerName?: string;
-  };
-  const {
-    moment = "tarde",
-    momentLabel = "tarde livre",
-    eventTitle,
-    eventWhen,
-    targetWord,
-    targetPt,
-    knownWords = [],
-    learnerName,
-  } = body;
+  sweepBuckets();
+  // 20 dialogues/hour/IP is generous for a 4-moments-a-day app
+  if (!rateLimit(`dlg:${clientKey(req)}`, 20, 3_600_000)) {
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const moment = (
+    VALID_MOMENTS.has(body.moment as string) ? body.moment : "tarde"
+  ) as MomentId;
+  const momentLabel = boundedStr(body.momentLabel, 60) ?? "tarde livre";
+  const eventTitle = boundedStr(body.eventTitle, 120);
+  const eventWhen = boundedStr(body.eventWhen, 40);
+  const targetWord = boundedStr(body.targetWord, 20);
+  const targetPt = boundedStr(body.targetPt, 60);
+  const knownWords = boundedStrs(body.knownWords, 40, 12);
+  const learnerName = boundedStr(body.learnerName, 60);
 
   const eventLine = eventTitle
     ? `The learner has this on their agenda soon: "${eventTitle}"${eventWhen ? ` at ${eventWhen}` : ""}. The FIRST Eita line must naturally reference this plan (in simple Mandarin, with PT translation).`

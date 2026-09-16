@@ -3,6 +3,7 @@
 // Prefetched when the agenda renders so the tap feels instant.
 import type { AgendaItem } from "./calendar";
 import { conceptOf, curriculum, knownWords, momentById, segment } from "./engine";
+import { track } from "./telemetry";
 import type { Dialogue, LearnerState } from "./types";
 
 const pending = new Map<string, Promise<Dialogue | null>>();
@@ -54,7 +55,10 @@ async function request(
         learnerName: state.profile?.name,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      track("dialogue.fallback", { status: res.status });
+      return null;
+    }
     const d = (await res.json()) as Dialogue;
     if (!d.turns?.length) return null;
     // word segments power the colored, tap-to-define chips in the UI
@@ -68,6 +72,7 @@ async function request(
     }
     return d;
   } catch {
+    track("dialogue.fallback", { status: "timeout" });
     return null;
   } finally {
     clearTimeout(t);

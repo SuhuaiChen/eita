@@ -38,9 +38,16 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
   (`speechSynthesis`), picking the best available zh voice; 🐢 = slower rate.
   There is no `/api/tts` route — the earlier DashScope plan was dropped.
 - `src/lib/calendar.ts` — agenda model: real Google Calendar events when a
-  token is stored (implicit OAuth via `NEXT_PUBLIC_GOOGLE_CLIENT_ID`,
-  redirect lands back on `/perfil`), otherwise a deterministic demo agenda
-  with one event always ~45min ahead so a "Conversar" button is always live.
+  token is stored. Two OAuth modes: auth-code flow when
+  `GOOGLE_CLIENT_SECRET` + `NEXT_PUBLIC_GOOGLE_CODE_FLOW=1` are set (exchange
+  at `/api/gcal/token`, refresh token lives in an httpOnly cookie → stays
+  connected past 1h), otherwise the implicit token flow. No connection → a
+  deterministic demo agenda with one event always ~45min ahead so a
+  "Conversar" button is always live.
+- `src/lib/auth.ts` + store — optional Supabase magic-link auth; when signed
+  in, `eita_state` rows key on `u:<uid>` (auth-backed RLS in schema.sql),
+  remote-newer snapshots restore over local. Without envs the app is 100%
+  local — auth UI hides itself.
 - `src/lib/ai.ts` + `src/app/api/dialogue` — event-personalized dialogues via
   OpenAI (`OPENAI_MODEL`, default gpt-5-mini, reasoning_effort minimal).
   Prefetched on the hoje agenda render; client falls back to scripted
@@ -50,7 +57,24 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
   banks with dominance dots), `/perfil` (Google connect). `/` redirects.
 - Keys live in `.env.local` (gitignored): `OPENAI_API_KEY`, `OPENAI_MODEL`,
   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (dedicated OAuth client in the `eita-app`
-  GCP project; redirect URIs `http://localhost:{3000,3001}/perfil`).
+  GCP project; redirect URIs `http://localhost:{3000,3001}/perfil`),
+  `GOOGLE_CLIENT_SECRET` (code flow), Supabase envs.
+
+## Production deployment
+
+- Deploy on Vercel: `vercel link` → `vercel` — the build is static except
+  `/api/dialogue`, `/api/gcal/token`, `/api/telemetry` (serverless fns).
+- Set env vars in the Vercel project (everything in `.env.example`), then
+  register `https://<domain>/perfil` as an authorized redirect URI + JS origin
+  on the Google OAuth client.
+- Google consent screen is in Testing mode (≤100 users, no verification).
+  Going public requires Google OAuth verification for the sensitive
+  `calendar.events.readonly` scope — needs the privacy policy URL (/privacidade)
+  and a short demo video; budget ~1-2 weeks.
+- Supabase: run `supabase/schema.sql`, enable Email auth (magic link), add the
+  site URL to Auth → URL Configuration. Without envs everything stays local.
+- Content note: HanFlow curriculum is used for the demo — confirm licensing
+  before commercial distribution.
 
 ## Design rules worth keeping
 

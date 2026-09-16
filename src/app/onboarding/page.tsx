@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BigButton from "@/components/BigButton";
 import { MOMENTS, TOPICS } from "@/lib/engine";
+import { track } from "@/lib/telemetry";
 import { useLearner } from "@/lib/store";
 import type { LevelId, MomentSetting, SelfConfidence, TopicId } from "@/lib/types";
 
@@ -56,6 +57,7 @@ export default function Onboarding() {
 
   function finish() {
     if (!level || !confidence) return;
+    track("onboarding.complete", { level, interests: interests.length });
     startProfile({
       name: name.trim(),
       level,

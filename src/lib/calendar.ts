@@ -102,6 +102,21 @@ export function googleConfigured(): boolean {
   return !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 }
 
+/** auth-code + refresh-cookie flow on when the server has the client secret */
+export function gcalCodeFlow(): boolean {
+  return process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW === "1";
+}
+
+const GCAL_LINKED_KEY = "eita:gcal:linked";
+
+/** "is the calendar connected?" — survives access-token expiry under code flow */
+export function gcalLinked(): boolean {
+  if (typeof window === "undefined") return false;
+  if (gcalCodeFlow()) return localStorage.getItem(GCAL_LINKED_KEY) === "1";
+  return gcalToken() !== null;
+}
+
+/** the raw stored access token — null when expired or absent */
 export function gcalToken(): { token: string; exp: number } | null {
   if (typeof window === "undefined") return null;
   try {
@@ -118,14 +133,86 @@ export function gcalToken(): { token: string; exp: number } | null {
   }
 }
 
-export function gcalDisconnect() {
-  localStorage.removeItem(GCAL_TOKEN_KEY);
+function storeAccessToken(token: string, ttlSec: number) {
+  localStorage.setItem(
+    GCAL_TOKEN_KEY,
+    JSON.stringify({ token, exp: Date.now() + ttlSec * 1000 })
+  );
 }
 
-/** parse the #access_token=... hash after the OAuth redirect back to /perfil */
-export function gcalConsumeRedirect(): boolean {
-  if (typeof window === "undefined" || !window.location.hash.includes("="))
+/** a usable access token — refreshes via the httpOnly cookie when expired */
+export async function gcalAccessToken(): Promise<string | null> {
+  const t = gcalToken();
+  if (t) return t.token;
+  if (!gcalCodeFlow() || localStorage.getItem(GCAL_LINKED_KEY) !== "1") return null;
+  const res = await fetch("/api/gcal/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).catch(() => null);
+  if (!res?.ok) {
+    if (res?.status === 401) gcalDisconnect();
+    return null;
+  }
+  const data = (await res.json().catch(() => null)) as {
+    access_token?: string;
+    expires_in?: number;
+  } | null;
+  if (!data?.access_token) return null;
+  storeAccessToken(data.access_token, data.expires_in ?? 3600);
+  return data.access_token;
+}
+
+export function gcalDisconnect() {
+  localStorage.removeItem(GCAL_TOKEN_KEY);
+  localStorage.removeItem(GCAL_LINKED_KEY);
+  if (gcalCodeFlow()) {
+    // revoke the refresh cookie server-side — best effort
+    fetch("/api/gcal/token", { method: "DELETE" }).catch(() => {});
+  }
+}
+
+/** consume the OAuth redirect back on /perfil — code or implicit hash */
+export async function gcalConsumeRedirect(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  // --- auth-code flow: ?code=...&state=... in the query string
+  const qp = new URLSearchParams(window.location.search);
+  const code = qp.get("code");
+  if (code) {
+    const expected = sessionStorage.getItem(GCAL_STATE_KEY);
+    if (expected && qp.get("state") !== expected) {
+      history.replaceState(null, "", window.location.pathname);
+      return false;
+    }
+    sessionStorage.removeItem(GCAL_STATE_KEY);
+    history.replaceState(null, "", window.location.pathname);
+    const res = await fetch("/api/gcal/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code,
+        redirect_uri: `${window.location.origin}/perfil`,
+      }),
+    }).catch(() => null);
+    if (!res?.ok) return false;
+    const data = (await res.json().catch(() => null)) as {
+      access_token?: string;
+      expires_in?: number;
+    } | null;
+    if (!data?.access_token) return false;
+    storeAccessToken(data.access_token, data.expires_in ?? 3600);
+    localStorage.setItem(GCAL_LINKED_KEY, "1");
+    return true;
+  }
+  // code-flow errors also arrive in the query string
+  if (qp.get("error")) {
+    history.replaceState(null, "", window.location.pathname);
     return false;
+  }
+
+  // --- implicit flow: #access_token=... in the hash
+  if (!window.location.hash.includes("=")) return false;
   const p = new URLSearchParams(window.location.hash.slice(1));
   const token = p.get("access_token");
   const error = p.get("error");
@@ -139,11 +226,7 @@ export function gcalConsumeRedirect(): boolean {
   sessionStorage.removeItem(GCAL_STATE_KEY);
   history.replaceState(null, "", window.location.pathname);
   if (!token) return false;
-  const ttl = Number(p.get("expires_in") ?? 3600);
-  localStorage.setItem(
-    GCAL_TOKEN_KEY,
-    JSON.stringify({ token, exp: Date.now() + ttl * 1000 })
-  );
+  storeAccessToken(token, Number(p.get("expires_in") ?? 3600));
   return true;
 }
 
@@ -166,10 +249,11 @@ export function gcalConnectUrl(): string {
   const q = new URLSearchParams({
     client_id: cid,
     redirect_uri: redirect,
-    response_type: "token",
+    response_type: gcalCodeFlow() ? "code" : "token",
     scope: "https://www.googleapis.com/auth/calendar.events.readonly",
     include_granted_scopes: "true",
     state,
+    ...(gcalCodeFlow() ? { access_type: "offline", prompt: "consent" } : {}),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${q}`;
 }
@@ -231,16 +315,16 @@ export async function getAgenda(
   profile: Profile,
   now: Date
 ): Promise<{ items: AgendaItem[]; source: "google" | "demo" }> {
-  const t = gcalToken();
+  const t = await gcalAccessToken();
   if (t) {
     try {
-      const items = await fetchGoogleEvents(t.token, now);
+      const items = await fetchGoogleEvents(t, now);
       return { items: items.sort((a, b) => a.start.getTime() - b.start.getTime()), source: "google" };
     } catch (err) {
-      // a revoked/expired token should drop the connection; a flaky network
-      // shouldn't — keep the token and just show the demo agenda this render
+      // a revoked token should drop the connection; a flaky network
+      // shouldn't — keep the link and just show the demo agenda this render
       const status = (err as { status?: number }).status;
-      if (status === 401 || status === 403) gcalDisconnect();
+      if ((status === 401 || status === 403) && !gcalCodeFlow()) gcalDisconnect();
     }
   }
   return { items: demoAgenda(now), source: "demo" };

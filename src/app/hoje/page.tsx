@@ -8,8 +8,9 @@ import { useLearner } from "@/lib/store";
 import { dayKey, momentById, pickPractice, type Practice } from "@/lib/engine";
 import { currentMoment, fmtTime } from "@/lib/moments";
 import { cachePractice } from "@/lib/sessionCache";
-import { getAgenda, gcalToken, googleConfigured, isLive, type AgendaItem } from "@/lib/calendar";
+import { getAgenda, gcalLinked, googleConfigured, isLive, type AgendaItem } from "@/lib/calendar";
 import { prefetchEventDialogue } from "@/lib/ai";
+import { maybeNotify } from "@/lib/reminders";
 import { greeting } from "@/lib/copy";
 import { speak } from "@/lib/tts";
 
@@ -56,6 +57,13 @@ export default function Hoje() {
     [state.profile, now]
   );
 
+  // opt-in nudge when a moment window opens — only while the app is open
+  // (the honest scope of browser notifications without a push server)
+  useEffect(() => {
+    if (cm?.status === "now" && state.profile)
+      maybeNotify(momentById(cm.id)?.label ?? "", cm.id, dayKey(now));
+  }, [cm, state.profile, now]);
+
   // refetch the agenda at most every ~2min (ticks alone shouldn't hammer the
   // Google API), not on every render
   const agendaKey = Math.floor(now.getTime() / 120_000);
@@ -91,7 +99,7 @@ export default function Hoje() {
   const doneToday = state.dailyDone[todayKey]?.length ?? 0;
   const alreadyDid = cm && state.dailyDone[todayKey]?.includes(cm.id);
   const showTip = !(state.tipsSeen ?? []).includes(TIP_KEY);
-  const showAgendaPitch = googleConfigured() && !gcalToken() && !pitchDismissed;
+  const showAgendaPitch = googleConfigured() && !gcalLinked() && !pitchDismissed;
 
   const dismissTip = () =>
     update((s) => ({ ...s, tipsSeen: [...(s.tipsSeen ?? []), TIP_KEY] }));

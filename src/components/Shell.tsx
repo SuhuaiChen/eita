@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useLearner } from "@/lib/store";
 
 const NAV = [
   { href: "/hoje", label: "Hoje", icon: "☀️" },
@@ -11,9 +13,44 @@ const NAV = [
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
+  const { restoredFromRemote, clearRestoredFlag } = useLearner();
+  const [showRestored, setShowRestored] = useState(false);
+
+  // "your progress came back" — shown once when a signed-in learner opens a
+  // fresh device and the cloud snapshot lands over the empty local state
+  useEffect(() => {
+    if (!restoredFromRemote) return;
+    queueMicrotask(() => setShowRestored(true));
+    const t = setTimeout(() => {
+      setShowRestored(false);
+      clearRestoredFlag();
+    }, 6000);
+    return () => clearTimeout(t);
+  }, [restoredFromRemote, clearRestoredFlag]);
+
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
-      <main className="flex-1 px-5 pb-32 pt-8">{children}</main>
+      <main className="flex-1 px-5 pb-32 pt-8">
+        {showRestored && (
+          <div
+            role="status"
+            className="rise mb-4 flex items-center justify-between gap-3 rounded-2xl bg-jade-soft px-4 py-3 text-[1rem] text-jade"
+          >
+            <span>☁️ Seu progresso foi restaurado neste aparelho.</span>
+            <button
+              onClick={() => {
+                setShowRestored(false);
+                clearRestoredFlag();
+              }}
+              aria-label="Dispensar aviso"
+              className="min-h-11 min-w-11 shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+        {children}
+      </main>
       <nav
         aria-label="Navegação principal"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"

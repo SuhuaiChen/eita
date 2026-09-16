@@ -7,6 +7,9 @@ export const metadata: Metadata = {
   title: "Eita — Chinês que cabe no seu dia",
   description:
     "Conversinhas de mandarim na hora certa — antes dos seus compromissos, para quem já aprendeu um pouco.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
+  appleWebApp: { capable: true, title: "Eita", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

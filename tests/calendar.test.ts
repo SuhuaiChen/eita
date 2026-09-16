@@ -102,10 +102,10 @@ describe("isLive", () => {
 
 // ---- oauth redirect + token storage -----------------------------------------
 describe("gcal token lifecycle", () => {
-  it("stores token + state round-trip, strips the hash", () => {
+  it("stores token + state round-trip, strips the hash", async () => {
     sessionStorage.setItem("eita:gcal:state", "s1");
     loc.hash = "#access_token=tok123&expires_in=3600&state=s1";
-    expect(gcalConsumeRedirect()).toBe(true);
+    expect(await gcalConsumeRedirect()).toBe(true);
     const t = gcalToken();
     expect(t?.token).toBe("tok123");
     expect(t!.exp).toBeGreaterThan(Date.now());
@@ -113,18 +113,52 @@ describe("gcal token lifecycle", () => {
     expect(sessionStorage.getItem("eita:gcal:state")).toBeNull();
   });
 
-  it("rejects a mismatched state", () => {
+  it("rejects a mismatched state", async () => {
     sessionStorage.setItem("eita:gcal:state", "s1");
     loc.hash = "#access_token=tok123&state=other";
-    expect(gcalConsumeRedirect()).toBe(false);
+    expect(await gcalConsumeRedirect()).toBe(false);
     expect(gcalToken()).toBeNull();
   });
 
-  it("cleans the hash and stays disconnected on error=access_denied", () => {
+  it("cleans the hash and stays disconnected on error=access_denied", async () => {
     loc.hash = "#error=access_denied";
-    expect(gcalConsumeRedirect()).toBe(false);
+    expect(await gcalConsumeRedirect()).toBe(false);
     expect(gcalToken()).toBeNull();
     lokClear();
+  });
+
+  it("code flow: exchanges ?code= via the token route and marks linked", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW = "1";
+    sessionStorage.setItem("eita:gcal:state", "s1");
+    loc.search = "?code=authcode&state=s1";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ access_token: "at-1", expires_in: 3600 }),
+      }))
+    );
+    expect(await gcalConsumeRedirect()).toBe(true);
+    expect(gcalToken()?.token).toBe("at-1");
+    expect(localStorage.getItem("eita:gcal:linked")).toBe("1");
+    vi.unstubAllGlobals();
+    delete process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW;
+  });
+
+  it("code flow: refreshes an expired token through the cookie", async () => {
+    process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW = "1";
+    localStorage.setItem("eita:gcal:linked", "1");
+    const { gcalAccessToken } = await import("@/lib/calendar");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ access_token: "at-2", expires_in: 3600 }),
+      }))
+    );
+    expect(await gcalAccessToken()).toBe("at-2");
+    vi.unstubAllGlobals();
+    delete process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW;
   });
 
   it("drops expired tokens from storage", () => {

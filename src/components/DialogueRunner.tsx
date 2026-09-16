@@ -15,6 +15,7 @@ import { praise, pick } from "@/lib/copy";
 import { speak, stopSpeak } from "@/lib/tts";
 import { listen, speechSupported } from "@/lib/stt";
 import { recorderSupported, startRecording } from "@/lib/recorder";
+import { track } from "@/lib/telemetry";
 import Celebration, { pickCelebration, type CheerSpec } from "./Celebration";
 
 type Outcome = "ok" | "ok-help" | "fail";
@@ -103,6 +104,8 @@ export default function DialogueRunner({
   const scoredFinal = useRef(false);
   const overrides = useRef<Map<number, DialogueLine>>(new Map());
   const bottomRef = useRef<HTMLDivElement>(null);
+  const replyRef = useRef<HTMLDivElement>(null);
+  const focusedIdx = useRef(-1);
   const onFinishRef = useRef(onFinish);
   useEffect(() => {
     onFinishRef.current = onFinish;
@@ -139,6 +142,12 @@ export default function DialogueRunner({
             ? pick(praise.recovery).replace("{w}", targetWord())
             : pick(out === "ok" ? praise.solo : out === "ok-help" ? praise.helped : praise.reveal)
         );
+        track("practice.finish", {
+          outcome: out,
+          voice: voiceTurns.current,
+          tap: tapTurns.current,
+          recovery,
+        });
         onFinishRef.current(out, Math.min(hintsUsed.current, MAX_HINT), voiceTurns.current, tapTurns.current);
         setTimeout(() => setCheerFade(true), 1700);
       });
@@ -186,6 +195,15 @@ export default function DialogueRunner({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [shown.length, typing, awaitingReply]);
+
+  // keyboard/screen-reader focus: when a learner turn opens, land focus on the
+  // reply block so the prompt and options are the next thing read (once per
+  // turn — preventScroll because the bottom-anchor effect already scrolled)
+  useEffect(() => {
+    if (!awaitingReply || focusedIdx.current === idx) return;
+    focusedIdx.current = idx;
+    replyRef.current?.focus({ preventScroll: true });
+  }, [awaitingReply, idx]);
 
   useEffect(
     () => () => {
@@ -293,6 +311,7 @@ export default function DialogueRunner({
         setListening(false);
         endClip(false);
         sttErrs.current += 1;
+        track("stt.error", { err });
         if (sttErrs.current >= 2) setVoiceDead(true);
         setFeedback(STT_ERRORS[err] ?? "Não consegui ouvir — toque numa resposta.");
       },
@@ -551,8 +570,8 @@ export default function DialogueRunner({
 
   return (
     <Card onExit={onExit} moment={header}>
-      {/* thread */}
-      <div className="space-y-3">
+      {/* thread — new lines are announced politely to screen readers */}
+      <div className="space-y-3" role="log" aria-live="polite" aria-atomic="false" aria-label="Conversa">
         {shown.map((l) =>
           isEita(l) ? (
             <div key={l.key} className="rise flex justify-start">
@@ -645,7 +664,7 @@ export default function DialogueRunner({
 
       {/* reply area */}
       {learnerTurn && (
-        <div className="rise mt-5 border-t border-line pt-4">
+        <div ref={replyRef} tabIndex={-1} className="rise mt-5 border-t border-line pt-4 outline-none">
           <div className="flex items-center justify-between">
             <p className="text-[1rem] text-muted">
               {learnerTurn.prompt ?? "Sua resposta:"}

@@ -630,6 +630,39 @@ const dialogues = DIALOGUES.map((d) => ({
   turns: d.turns.map((t) => ({ ...t })),
 }));
 
+// ---------- validate ----------------------------------------------------------
+// Fail loudly instead of shipping a malformed curriculum — the UI assumes
+// every gloss is filled, every word segments, every dialogue is well-formed.
+
+const errors = [];
+const vocabIds = new Set(vocab.map((v) => v.id));
+
+for (const v of vocab) {
+  if (!v.id || !v.w || !v.p) errors.push(`vocab ${v.id}: missing id/w/p`);
+  if (!v.pt?.trim()) errors.push(`vocab ${v.w}: empty Portuguese gloss`);
+}
+for (const s of momentSentences) {
+  if (!s.hz || !s.words?.length) errors.push(`sentence ${s.hz}: no segmentation`);
+  for (const w of s.words)
+    if (!vocabIds.has(`v:${w}`) && !lexicon.get(w)) errors.push(`sentence ${s.hz}: unglossed word "${w}"`);
+}
+const dlgIds = new Set();
+for (const d of dialogues) {
+  if (dlgIds.has(d.id)) errors.push(`dialogue ${d.id}: duplicate id`);
+  dlgIds.add(d.id);
+  if (d.turns.length < 2) errors.push(`dialogue ${d.id}: <2 turns`);
+  for (const t of d.turns) {
+    if (t.role === "eita" && (!t.zh || !t.pt)) errors.push(`dialogue ${d.id}: eita line missing zh/pt`);
+    if (t.role === "learner" && (!t.replies?.length || t.replies.length < 2))
+      errors.push(`dialogue ${d.id}: learner turn needs ≥2 replies`);
+  }
+}
+if (errors.length) {
+  console.error(`curriculum validation failed (${errors.length}):`);
+  for (const e of errors.slice(0, 40)) console.error(`  - ${e}`);
+  process.exit(1);
+}
+
 // ---------- emit ------------------------------------------------------------
 
 const curriculum = {
