@@ -166,6 +166,13 @@ export interface Interaction {
   helpLevel: number; // hints used 0..3
   /** the concept was unintroduced when this practice ran */
   isNew?: boolean;
+  /** learner turns answered out loud vs tapped/typed — drives voice stats */
+  voiceTurns?: number;
+  tapTurns?: number;
+  /** which dialogue ran (for history replay) */
+  dialogueId?: string;
+  /** what the learner was practicing (hanzi label for display) */
+  targetWord?: string;
 }
 
 export interface LearnerState {
@@ -178,6 +185,8 @@ export interface LearnerState {
   recentDialogues: string[];
   /** ISO date -> moments completed */
   dailyDone: Record<string, MomentId[]>;
+  /** one-time coach marks already shown (e.g. "tap a word for its meaning") */
+  tipsSeen?: string[];
   lastSeenVersion: number;
 }
 

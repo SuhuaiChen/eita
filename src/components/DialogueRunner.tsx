@@ -14,6 +14,7 @@ import {
 import { praise, pick } from "@/lib/copy";
 import { speak, stopSpeak } from "@/lib/tts";
 import { listen, speechSupported } from "@/lib/stt";
+import { recorderSupported, startRecording } from "@/lib/recorder";
 import Celebration, { pickCelebration, type CheerSpec } from "./Celebration";
 
 type Outcome = "ok" | "ok-help" | "fail";
@@ -28,11 +29,29 @@ const MAX_HINT = 4;
 // move on gently — makes the recovery path reachable without punishing
 const MAX_MISSES = 3;
 
+// mid-dialogue resume: the thread snapshot is written on every advance and
+// cleared on finish/exit; the practice itself is persisted by /pratica
+export const RESUME_THREAD_KEY = "eita:resumeThread";
+export interface ResumeThread {
+  dialogueId: string;
+  shown: Rendered[];
+  idx: number;
+}
+
+const STT_ERRORS: Record<string, string> = {
+  "not-allowed": "Permita o microfone nas configurações do navegador — ou toque numa resposta.",
+  "service-not-allowed": "O serviço de voz está bloqueado neste navegador — toque numa resposta.",
+  "no-speech": "Não ouvi nada — fale um pouco mais alto, ou toque numa resposta.",
+  "audio-capture": "Não achei um microfone neste aparelho — toque numa resposta.",
+  network: "Sem conexão para o reconhecimento de voz — toque numa resposta.",
+};
+
 export default function DialogueRunner({
   dialogue,
   recovery,
   context,
   learnerName,
+  resume,
   onFinish,
   onExit,
 }: {
@@ -40,15 +59,16 @@ export default function DialogueRunner({
   recovery: boolean;
   context?: string;
   learnerName?: string;
-  onFinish: (outcome: Outcome, helpLevel: number) => void;
+  resume?: ResumeThread;
+  onFinish: (outcome: Outcome, helpLevel: number, voiceTurns: number, tapTurns: number) => void;
   onExit: () => void;
 }) {
   const router = useRouter();
   const turns = dialogue.turns;
   const moment = momentById(dialogue.moment);
 
-  const [shown, setShown] = useState<Rendered[]>([]);
-  const [idx, setIdx] = useState(0); // next turn index to process
+  const [shown, setShown] = useState<Rendered[]>(resume?.shown ?? []);
+  const [idx, setIdx] = useState(resume?.idx ?? 0); // next turn index to process
   const [done, setDone] = useState(false);
 
   const [hintLevel, setHintLevel] = useState(0);
@@ -59,16 +79,26 @@ export default function DialogueRunner({
   const [showPt, setShowPt] = useState<Set<string>>(new Set());
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [lastVoice, setLastVoice] = useState<{ heard: string; closest?: ReplyOption } | null>(null);
+  const [voiceClip, setVoiceClip] = useState<string | null>(null);
+  const [voiceDead, setVoiceDead] = useState(false);
+  const [rehearse, setRehearse] = useState<{ key: string; listening: boolean; msg?: string; good?: boolean } | null>(null);
   const [cheer, setCheer] = useState<CheerSpec | null>(null);
   const [cheerFade, setCheerFade] = useState(false);
   const [selWord, setSelWord] = useState<{ key: string; i: number } | null>(null);
   const recRef = useRef<{ stop: () => void } | null>(null);
+  const rehearseRecRef = useRef<{ stop: () => void } | null>(null);
+  const clipRef = useRef<{ stop: () => Promise<string | null>; cancel: () => void } | null>(null);
 
   const anyHelp = useRef(false);
   const anyFail = useRef(false);
   const hintsUsed = useRef(0);
   const turnMisses = useRef(0);
   const advancing = useRef(false);
+  const autoRetried = useRef(false);
+  const sttErrs = useRef(0);
+  const voiceTurns = useRef(0);
+  const tapTurns = useRef(0);
   const lastInterim = useRef("");
   const scoredFinal = useRef(false);
   const overrides = useRef<Map<number, DialogueLine>>(new Map());
@@ -109,7 +139,7 @@ export default function DialogueRunner({
             ? pick(praise.recovery).replace("{w}", targetWord())
             : pick(out === "ok" ? praise.solo : out === "ok-help" ? praise.helped : praise.reveal)
         );
-        onFinishRef.current(out, Math.min(hintsUsed.current, MAX_HINT));
+        onFinishRef.current(out, Math.min(hintsUsed.current, MAX_HINT), voiceTurns.current, tapTurns.current);
         setTimeout(() => setCheerFade(true), 1700);
       });
       return;
@@ -132,11 +162,26 @@ export default function DialogueRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, done]);
 
-  // a new turn re-arms the double-tap guard and the per-turn miss counter
+  // a new turn re-arms the double-tap guard, the miss counter, the auto-retry
+  // allowance, and clears the previous attempt's voice feedback
   useEffect(() => {
     advancing.current = false;
     turnMisses.current = 0;
+    autoRetried.current = false;
+    queueMicrotask(() => {
+      setLastVoice(null);
+      setVoiceClip(null);
+      setRehearse(null);
+    });
   }, [idx]);
+
+  // persist the thread so leaving mid-dialogue can resume (U4)
+  useEffect(() => {
+    try {
+      if (done || idx === 0) sessionStorage.removeItem(RESUME_THREAD_KEY);
+      else sessionStorage.setItem(RESUME_THREAD_KEY, JSON.stringify({ dialogueId: dialogue.id, shown, idx }));
+    } catch {}
+  }, [shown, idx, done, dialogue.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -146,14 +191,31 @@ export default function DialogueRunner({
     () => () => {
       stopSpeak();
       recRef.current?.stop();
+      rehearseRecRef.current?.stop();
+      clipRef.current?.cancel();
     },
     []
   );
+
+  /** capture the attempt for "ouça minha voz" — silently skipped if the device refuses */
+  function armClip() {
+    clipRef.current?.cancel();
+    clipRef.current = recorderSupported() ? startRecording() : null;
+  }
+
+  function endClip(save: boolean) {
+    const r = clipRef.current;
+    clipRef.current = null;
+    if (!r) return;
+    if (save) r.stop().then((url) => url && setVoiceClip(url));
+    else r.cancel();
+  }
 
   function stopListening() {
     recRef.current?.stop();
     recRef.current = null;
     setListening(false);
+    endClip(true);
   }
 
   function scoreSpeech(t: string, alts?: string[]) {
@@ -164,18 +226,28 @@ export default function DialogueRunner({
       .sort((a, b) => (b.m === "ok" ? 1 : b.m === "close" ? 0.5 : 0) - (a.m === "ok" ? 1 : a.m === "close" ? 0.5 : 0));
     const best = scored[0];
     if (best?.m === "ok") {
-      advanceWith(best.r, false);
+      advanceWith(best.r, false, "voice");
     } else if (best?.m === "close") {
       // a near match is a real attempt — it counts as helped
       anyHelp.current = true;
       miss();
-      setFeedback("Quase! Ouça e tente de novo:");
+      setLastVoice({ heard: t, closest: best.r });
+      setFeedback("Quase! Ouça e fale de novo:");
       speak(best.r.zh);
+      // after a near miss we play the model then re-open the mic once —
+      // seniors shouldn't have to re-tap to retry
+      if (!autoRetried.current && !advancing.current) {
+        autoRetried.current = true;
+        setTimeout(() => {
+          if (!advancing.current && !done) startListening();
+        }, 1600);
+      }
     } else {
       miss();
       // one garbled capture isn't a learning signal — only mark the
       // exercise "helped" when the misses repeat
       if (turnMisses.current >= 2) anyHelp.current = true;
+      setLastVoice({ heard: t });
       setFeedback("Não entendi bem — tente de novo ou toque numa resposta.");
     }
   }
@@ -193,6 +265,7 @@ export default function DialogueRunner({
     lastInterim.current = "";
     scoredFinal.current = false;
     setListening(true);
+    armClip();
     const handle = listen({
       onResult: ({ transcript: t, final, alts }) => {
         setTranscript(t);
@@ -212,21 +285,70 @@ export default function DialogueRunner({
           const t = lastInterim.current;
           lastInterim.current = "";
           scoredFinal.current = true;
+          endClip(true);
           scoreSpeech(t);
         }
       },
-      onError: () => {
+      onError: (err) => {
         setListening(false);
-        setFeedback("Não consegui ouvir — verifique o microfone ou toque numa resposta.");
+        endClip(false);
+        sttErrs.current += 1;
+        if (sttErrs.current >= 2) setVoiceDead(true);
+        setFeedback(STT_ERRORS[err] ?? "Não consegui ouvir — toque numa resposta.");
       },
     });
     if (!handle) {
       setListening(false);
+      clipRef.current?.cancel();
+      setVoiceDead(true);
       setFeedback("Não consigo ouvir sua voz neste aparelho — toque numa resposta.");
       return;
     }
     recRef.current = handle;
   }
+
+  // ---------- rehearsal ("repita comigo") — shadow any eita line, no scoring ----
+
+  function startRehearse(l: Rendered) {
+    if (listening || rehearse?.listening) return;
+    const reply: ReplyOption = { zh: l.zh, py: l.py ?? "", pt: l.pt ?? "", words: l.words ?? [] };
+    setRehearse({ key: l.key, listening: true });
+    armClip();
+    const handle = listen({
+      onResult: ({ transcript: t, final, alts }) => {
+        if (!final) return;
+        rehearseRecRef.current = null;
+        endClip(true);
+        const cands = alts?.length ? alts : [t];
+        const m = cands.some((c) => matchesReply(c, reply) === "ok")
+          ? "ok"
+          : cands.some((c) => matchesReply(c, reply) === "close")
+            ? "close"
+            : "no";
+        if (m === "ok") {
+          setRehearse({ key: l.key, listening: false, msg: "Muito bem — soou natural!", good: true });
+        } else if (m === "close") {
+          setRehearse({ key: l.key, listening: false, msg: "Quase — ouça devagar e tente de novo." });
+          speak(l.zh, { slow: true });
+        } else {
+          setRehearse({ key: l.key, listening: false, msg: "Não captei bem — tente de novo." });
+        }
+      },
+      onEnd: () => setRehearse((r) => (r?.listening ? { ...r, listening: false } : r)),
+      onError: () =>
+        setRehearse({ key: l.key, listening: false, msg: "Não consegui ouvir — toque de novo quando quiser." }),
+    });
+    if (!handle) setRehearse({ key: l.key, listening: false, msg: "Voz indisponível neste aparelho." });
+    else rehearseRecRef.current = handle;
+  }
+
+  function stopRehearse() {
+    rehearseRecRef.current?.stop();
+    rehearseRecRef.current = null;
+    setRehearse((r) => (r ? { ...r, listening: false } : r));
+  }
+
+  // ---------------------------------------------------------------------------
 
   function pickReply(r: ReplyOption, i: number) {
     if (!awaitingReply || current.role !== "learner" || advancing.current) return;
@@ -241,7 +363,7 @@ export default function DialogueRunner({
         // reveal correct and move on as a soft fail
         anyFail.current = true;
         setFeedback("Sem problema — essa a gente repete depois.");
-        advanceWith(r, true);
+        advanceWith(r, true, "auto");
       } else {
         miss();
         setHintLevel((h) => Math.max(h, 1));
@@ -250,7 +372,7 @@ export default function DialogueRunner({
       }
       return;
     }
-    advanceWith(r, false);
+    advanceWith(r, false, "tap");
   }
 
   /** "não sei" — reveal the suggested reply, then move on as a soft fail */
@@ -262,10 +384,12 @@ export default function DialogueRunner({
     setHintLevel(MAX_HINT);
     setFeedback("Sem problema — olha como se diz:");
     speak(r.zh);
-    setTimeout(() => advanceWith(r, true), 1600);
+    setTimeout(() => advanceWith(r, true, "auto"), 1600);
   }
 
-  function advanceWith(r: ReplyOption, failed: boolean) {
+  function advanceWith(r: ReplyOption, failed: boolean, via: "voice" | "tap" | "typed" | "auto") {
+    if (via === "voice") voiceTurns.current += 1;
+    else if (via !== "auto") tapTurns.current += 1;
     if (!failed && r.follow && turns[idx + 1]?.role === "eita") {
       overrides.current.set(idx + 1, r.follow);
     }
@@ -275,6 +399,7 @@ export default function DialogueRunner({
     setTypeMode(false);
     setTyped("");
     setFeedback(null);
+    setLastVoice(null);
     setShown((s) => [
       ...s,
       { ...r, key: `u${idx}-${r.zh.slice(0, 4)}`, mine: true },
@@ -296,7 +421,7 @@ export default function DialogueRunner({
         return;
       }
       advancing.current = true;
-      advanceWith(exact.r, false);
+      advanceWith(exact.r, false, "typed");
       return;
     }
     const close = results.find((x) => x.m === "close");
@@ -369,6 +494,8 @@ export default function DialogueRunner({
       text: glossesFor(suggested.words).map((g) => `${g.w} ${g.pt}`).join("  ·  "),
     };
   }, [learnerTurn, hintLevel, targetGloss, suggested]);
+
+  const voiceAvailable = speechSupported() && !voiceDead;
 
   // ---------- recap ----------
   const header = context
@@ -457,6 +584,17 @@ export default function DialogueRunner({
                   >
                     <span aria-hidden="true">🐢</span>
                   </button>
+                  {voiceAvailable && (
+                    <button
+                      onClick={() => (rehearse?.key === l.key && rehearse.listening ? stopRehearse() : startRehearse(l))}
+                      className={`flex min-h-12 min-w-12 items-center justify-center rounded-full text-[1.05rem] active:bg-surface ${
+                        rehearse?.key === l.key && rehearse.listening ? "animate-pulse bg-accent-soft text-accent" : "text-muted"
+                      }`}
+                      aria-label={`Repetir ${l.zh}`}
+                    >
+                      <span aria-hidden="true">🎤</span>
+                    </button>
+                  )}
                   {l.pt && (
                     <button
                       onClick={() =>
@@ -473,6 +611,11 @@ export default function DialogueRunner({
                     </button>
                   )}
                 </div>
+                {rehearse?.key === l.key && (
+                  <p aria-live="polite" className={`mt-1.5 text-[1rem] font-medium ${rehearse.listening ? "text-muted" : rehearse.good ? "text-jade" : "text-hint"}`}>
+                    {rehearse.listening ? "Sua vez — repita a frase…" : rehearse.msg}
+                  </p>
+                )}
                 {showPt.has(l.key) && (
                   <p className="mt-1 text-[1rem] text-muted">{l.pt}</p>
                 )}
@@ -530,7 +673,7 @@ export default function DialogueRunner({
           </div>
 
           {/* voice-first reply on choice turns */}
-          {learnerTurn.kind === "choice" && speechSupported() && !typeMode && (
+          {learnerTurn.kind === "choice" && speechSupported() && !voiceDead && !typeMode && (
             <div className="mt-4">
               <button
                 onClick={listening ? stopListening : startListening}
@@ -549,6 +692,40 @@ export default function DialogueRunner({
               <p className="mt-2 text-center text-[0.9rem] text-muted">
                 ou toque numa resposta abaixo
               </p>
+            </div>
+          )}
+          {learnerTurn.kind === "choice" && !speechSupported() && (
+            <p className="mt-3 text-center text-[0.95rem] text-muted">
+              O microfone não funciona neste navegador — toque nas respostas.
+            </p>
+          )}
+          {learnerTurn.kind === "choice" && speechSupported() && voiceDead && (
+            <p className="mt-3 text-center text-[0.95rem] text-muted">
+              O reconhecimento de voz está instável agora — toque nas respostas.
+            </p>
+          )}
+
+          {/* what the recognizer heard vs the closest reply — misses stay legible */}
+          {lastVoice && (
+            <div className="rise mt-3 rounded-2xl bg-paper p-3.5">
+              <p className="text-[0.9rem] font-semibold uppercase tracking-wide text-muted">Você disse</p>
+              <p lang="zh-CN" className="zh mt-0.5 text-[1.15rem]">{lastVoice.heard}</p>
+              {lastVoice.closest && (
+                <>
+                  <p className="mt-2 text-[0.9rem] font-semibold uppercase tracking-wide text-muted">Mais perto de</p>
+                  {lastVoice.closest.py && <p className="py-big mt-0.5 text-[1.05rem]">{lastVoice.closest.py}</p>}
+                  <p lang="zh-CN" className="zh text-[1.15rem] font-medium">{lastVoice.closest.zh}</p>
+                  <p className="text-[0.95rem] text-muted">{lastVoice.closest.pt}</p>
+                </>
+              )}
+              {voiceClip && (
+                <button
+                  onClick={() => new Audio(voiceClip).play()}
+                  className="mt-2 min-h-11 rounded-xl bg-surface px-4 text-[0.95rem] text-muted"
+                >
+                  🔉 Ouça minha voz
+                </button>
+              )}
             </div>
           )}
 

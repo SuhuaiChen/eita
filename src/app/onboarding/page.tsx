@@ -179,7 +179,8 @@ export default function Onboarding() {
               Em quais momentos podemos praticar juntos?
             </h1>
             <p className="mt-2 text-[1.1rem] text-muted">
-              Cada prática dura menos de um minuto.
+              A gente sugere uma conversinha nesses horários quando você abrir o
+              app — cada uma dura menos de um minuto.
             </p>
             <div className="mt-8 grid gap-3">
               {moments.map((m, i) => {

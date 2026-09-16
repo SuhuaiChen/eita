@@ -15,8 +15,43 @@ import { currentMoment } from "@/lib/moments";
 import { getAgenda } from "@/lib/calendar";
 import { aiDialogueForEvent } from "@/lib/ai";
 import { takePractice } from "@/lib/sessionCache";
-import DialogueRunner from "@/components/DialogueRunner";
+import DialogueRunner, {
+  RESUME_THREAD_KEY,
+  type ResumeThread,
+} from "@/components/DialogueRunner";
 import type { MomentId } from "@/lib/types";
+
+const RESUME_PRACTICE_KEY = "eita:resumePractice";
+const RESUME_MAX_AGE = 30 * 60_000;
+
+interface ResumePractice {
+  at: number;
+  practice: Practice;
+}
+
+function readResume(): { practice: Practice; thread?: ResumeThread } | null {
+  try {
+    const raw = sessionStorage.getItem(RESUME_PRACTICE_KEY);
+    if (!raw) return null;
+    const rp = JSON.parse(raw) as ResumePractice;
+    if (Date.now() - rp.at > RESUME_MAX_AGE) return null;
+    const tr = sessionStorage.getItem(RESUME_THREAD_KEY);
+    const thread = tr ? (JSON.parse(tr) as ResumeThread) : undefined;
+    return {
+      practice: rp.practice,
+      thread: thread?.dialogueId === rp.practice.dialogue.id ? thread : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function clearResume() {
+  try {
+    sessionStorage.removeItem(RESUME_PRACTICE_KEY);
+    sessionStorage.removeItem(RESUME_THREAD_KEY);
+  } catch {}
+}
 
 function PraticaInner() {
   const params = useSearchParams();
@@ -34,6 +69,7 @@ function PraticaInner() {
   const again = params.get("again");
 
   const [practice, setPractice] = useState<Practice | null>(null);
+  const [resumeThread, setResumeThread] = useState<ResumeThread | undefined>(undefined);
   const [pending, setPending] = useState(!!eventId);
   const [missingEvent, setMissingEvent] = useState(false);
   const stateRef = useRef(state);
@@ -52,10 +88,23 @@ function PraticaInner() {
   useEffect(() => {
     if (eventId || !ready || !hasProfile) return;
     const s = stateRef.current;
-    queueMicrotask(() =>
-      setPractice(s ? (takePractice(moment) ?? pickPractice(s, moment)) : null)
-    );
-  }, [ready, hasProfile, eventId, moment, again]);
+    queueMicrotask(() => {
+      // an in-flight dialogue wins over everything — resume where we left off
+      const rs = readResume();
+      if (rs && (!rawM || rs.practice.dialogue.moment === moment) && !again) {
+        setPractice(rs.practice);
+        setResumeThread(rs.thread);
+        return;
+      }
+      const p = s ? (takePractice(moment) ?? pickPractice(s, moment)) : null;
+      setPractice(p);
+      setResumeThread(undefined);
+      try {
+        if (p) sessionStorage.setItem(RESUME_PRACTICE_KEY, JSON.stringify({ at: Date.now(), practice: p }));
+        else sessionStorage.removeItem(RESUME_PRACTICE_KEY);
+      } catch {}
+    });
+  }, [ready, hasProfile, eventId, moment, again, rawM]);
 
   // event practice: resolve agenda item → try AI-personalized dialogue →
   // fall back to the engine's scripted/generated pick
@@ -74,7 +123,10 @@ function PraticaInner() {
           return;
         }
         const fallback = pickEventPractice(stateRef.current!, ev);
-        const ai = await aiDialogueForEvent(stateRef.current!, ev);
+        // AI personalizes upcoming events; a past event gets the scripted
+        // practice instead ("how was it" prompts would need different copy)
+        const past = ev.start.getTime() < Date.now() - 15 * 60_000;
+        const ai = past ? null : await aiDialogueForEvent(stateRef.current!, ev);
         if (dead) return;
         if (ai) {
           setPractice({
@@ -158,17 +210,29 @@ function PraticaInner() {
       recovery={practice.recovery}
       context={practice.eventTitle}
       learnerName={state.profile?.name}
-      onFinish={(outcome: Outcome, helpLevel: number) =>
+      resume={resumeThread}
+      onFinish={(outcome: Outcome, helpLevel: number, voiceTurns: number, tapTurns: number) => {
+        clearResume();
         update((s) =>
           applyResult(
             s,
-            { target: practice.target, moment: practice.dialogue.moment, dialogueId: practice.dialogue.id },
+            {
+              target: practice.target,
+              moment: practice.dialogue.moment,
+              dialogueId: practice.dialogue.id,
+              voiceTurns,
+              tapTurns,
+            },
             outcome,
             helpLevel
           )
-        )
-      }
-      onExit={() => router.replace("/hoje")}
+        );
+      }}
+      onExit={() => {
+        // leaving mid-dialogue keeps the resume snapshot — that's the point;
+        // finishing is what clears it
+        router.replace("/hoje");
+      }}
     />
   );
 }

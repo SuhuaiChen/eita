@@ -697,7 +697,13 @@ export type Outcome = "ok" | "ok-help" | "fail";
 
 export function applyResult(
   state: LearnerState,
-  practice: { target: ConceptId; moment: MomentId; dialogueId?: string },
+  practice: {
+    target: ConceptId;
+    moment: MomentId;
+    dialogueId?: string;
+    voiceTurns?: number;
+    tapTurns?: number;
+  },
   outcome: Outcome,
   helpLevel: number,
   now = Date.now()
@@ -740,6 +746,12 @@ export function applyResult(
     result: outcome,
     helpLevel,
     isNew: wasNew,
+    voiceTurns: practice.voiceTurns,
+    tapTurns: practice.tapTurns,
+    dialogueId: practice.dialogueId,
+    targetWord: practice.target.startsWith("v:")
+      ? vocabById.get(practice.target)?.w
+      : nodeById.get(practice.target)?.label,
   });
   if (state.interactions.length > 400) state.interactions = state.interactions.slice(-400);
   state.recentTargets = [
@@ -772,13 +784,35 @@ export function stats(state: LearnerState, now = Date.now()) {
   const noHelpRate = recent.length
     ? recent.filter((i) => i.result === "ok").length / recent.length
     : 0;
+  // count actual conversations, not distinct moments — a learner can do more
+  // than one conversinha in the same moment
   const week: { day: string; count: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = dayKey(now - i * DAY);
-    week.push({ day: d, count: state.dailyDone[d]?.length ?? 0 });
+    week.push({ day: d, count: state.interactions.filter((x) => dayKey(x.ts) === d).length });
   }
   const masteredSentences = Object.entries(state.concepts)
     .filter(([, c]) => c.intro && c.f >= 0.7 && c.ok >= 2)
     .map(([id]) => id);
   return { knownIds, learning, noHelpRate, week, masteredSentences };
+}
+
+// ---------- progress vocabulary ------------------------------------------------
+
+/** one honest state per word — replaces the blended dominance number */
+export type WordState = "nova" | "aprendendo" | "firme" | "a revisar";
+
+export function wordState(c: ConceptState, now = Date.now()): WordState | null {
+  if (!c.intro) return null;
+  if (c.seen <= 2) return "nova";
+  if (retrievability(c, now) < 0.45) return "a revisar";
+  return c.f >= 0.55 ? "firme" : "aprendendo";
+}
+
+/** introduced concepts whose memory is fading — what a review should target */
+export function fadingConcepts(state: LearnerState, now = Date.now()): ConceptId[] {
+  return Object.entries(state.concepts)
+    .filter(([, c]) => c.intro && retrievability(c, now) < 0.45)
+    .sort((a, b) => retrievability(a[1], now) - retrievability(b[1], now))
+    .map(([id]) => id);
 }

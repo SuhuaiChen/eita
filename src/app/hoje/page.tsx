@@ -8,21 +8,30 @@ import { useLearner } from "@/lib/store";
 import { dayKey, momentById, pickPractice, type Practice } from "@/lib/engine";
 import { currentMoment, fmtTime } from "@/lib/moments";
 import { cachePractice } from "@/lib/sessionCache";
-import { getAgenda, isLive, type AgendaItem } from "@/lib/calendar";
+import { getAgenda, gcalToken, googleConfigured, isLive, type AgendaItem } from "@/lib/calendar";
 import { prefetchEventDialogue } from "@/lib/ai";
 import { greeting } from "@/lib/copy";
 import { speak } from "@/lib/tts";
 
+const AGENDA_PITCH_KEY = "eita:agendaPitchSeen";
+const TIP_KEY = "words"; // tip ids live in state.tipsSeen
+
 export default function Hoje() {
-  const { state, ready } = useLearner();
+  const { state, ready, update } = useLearner();
   const router = useRouter();
   const [now, setNow] = useState(() => new Date());
   const [agenda, setAgenda] = useState<{ items: AgendaItem[]; source: string } | null>(null);
   const [practice, setPractice] = useState<Practice | null>(null);
+  const [pitchDismissed, setPitchDismissed] = useState(true);
   const hasProfile = !!state.profile;
 
   useEffect(() => {
     if (ready && !state.profile) router.replace("/onboarding");
+    queueMicrotask(() => {
+      try {
+        setPitchDismissed(!!localStorage.getItem(AGENDA_PITCH_KEY));
+      } catch {}
+    });
   }, [ready, state.profile, router]);
 
   // keep "now" live so Conversar appears/expires and moments roll over while
@@ -81,12 +90,40 @@ export default function Hoje() {
   const todayKey = dayKey(now);
   const doneToday = state.dailyDone[todayKey]?.length ?? 0;
   const alreadyDid = cm && state.dailyDone[todayKey]?.includes(cm.id);
+  const showTip = !(state.tipsSeen ?? []).includes(TIP_KEY);
+  const showAgendaPitch = googleConfigured() && !gcalToken() && !pitchDismissed;
+
+  const dismissTip = () =>
+    update((s) => ({ ...s, tipsSeen: [...(s.tipsSeen ?? []), TIP_KEY] }));
+
+  const dismissPitch = () => {
+    try {
+      localStorage.setItem(AGENDA_PITCH_KEY, "1");
+    } catch {}
+    setPitchDismissed(true);
+  };
 
   return (
     <Shell>
       <h1 className="text-[2.1rem] font-bold">
         {greeting(now.getHours())}, {state.profile.name}.
       </h1>
+
+      {showTip && (
+        <div className="rise mt-5 flex items-start justify-between gap-3 rounded-2xl bg-jade-soft px-4 py-3.5">
+          <p className="text-[1rem] leading-snug text-jade">
+            💡 Dica: numa conversinha, toque em qualquer palavra em chinês para
+            ver o que ela significa — e fale sua resposta em vez de tocar.
+          </p>
+          <button
+            onClick={dismissTip}
+            aria-label="Dispensar dica"
+            className="min-h-11 min-w-11 shrink-0 text-[1.1rem] text-jade"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {cm && meta && (
         <section className="mt-7">
@@ -129,8 +166,47 @@ export default function Hoje() {
                 {alreadyDid ? "Conversar de novo" : "Conversar"}
               </BigButton>
             </div>
+            {cm.status !== "now" && (
+              <p className="mt-3 text-center text-[0.95rem] text-muted">
+                ou{" "}
+                <button
+                  onClick={() => router.push(`/pratica?m=${cm.id}`)}
+                  className="underline underline-offset-4"
+                >
+                  converse agora mesmo
+                </button>
+                {" "}— sem esperar a hora.
+              </p>
+            )}
           </div>
         </section>
+      )}
+
+      {showAgendaPitch && (
+        <div className="rise mt-6 rounded-2xl border-2 border-accent/40 bg-accent-soft p-4">
+          <p className="text-[1.05rem] font-medium">
+            <span aria-hidden="true">📅 </span>
+            Quer conversinhas antes dos seus compromissos?
+          </p>
+          <p className="mt-1 text-[0.95rem] text-muted">
+            Conecte o Google Agenda e o Eita prepara uma prática para cada
+            compromisso do seu dia.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              onClick={() => router.push("/perfil")}
+              className="min-h-12 rounded-xl bg-accent px-5 text-[1rem] font-semibold text-white"
+            >
+              Conectar agenda
+            </button>
+            <button
+              onClick={dismissPitch}
+              className="min-h-12 px-3 text-[0.95rem] text-muted underline underline-offset-4"
+            >
+              Agora não
+            </button>
+          </div>
+        </div>
       )}
 
       <section className="mt-8">
@@ -148,6 +224,9 @@ export default function Hoje() {
           {agenda?.items.map((ev) => {
             const live = isLive(ev, now);
             const past = ev.start.getTime() + 10 * 60_000 < now.getTime();
+            // a just-ended event can still warm up a "como foi?" chat
+            const recentPast =
+              past && now.getTime() - ev.start.getTime() < 3 * 60 * 60_000;
             return (
               <div
                 key={ev.id}
@@ -170,6 +249,13 @@ export default function Hoje() {
                     className="pop min-h-14 shrink-0 rounded-2xl bg-accent px-5 text-[1.05rem] font-semibold text-white active:scale-[0.97]"
                   >
                     Conversar
+                  </button>
+                ) : recentPast ? (
+                  <button
+                    onClick={() => router.push(`/pratica?e=${encodeURIComponent(ev.id)}`)}
+                    className="min-h-12 shrink-0 rounded-2xl border-2 border-line bg-surface px-4 text-[0.95rem] font-medium text-muted"
+                  >
+                    Como foi?
                   </button>
                 ) : (
                   !past && (

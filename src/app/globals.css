@@ -183,3 +183,21 @@ select:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- appearance preferences (src/lib/prefs.ts) ---------- */
+
+/* "Texto maior" — bumps every rem by ~12% on top of the base */
+html.font-grande {
+  font-size: 132%;
+}
+
+/* high contrast — darker text, stronger borders, no soft-on-soft text */
+html.high-contrast {
+  --color-ink: #16100a;
+  --color-muted: #4d4234;
+  --color-line: #a89478;
+  --color-accent: #a93218;
+  --color-accent-deep: #8c2610;
+  --color-jade: #24603a;
+  --color-hint: #6f4a05;
+}

@@ -3,11 +3,14 @@ import {
   applyResult,
   conceptOf,
   dayKey,
+  fadingConcepts,
   initState,
   matchesReply,
   pickEventPractice,
   pickPractice,
   retrievability,
+  stats,
+  wordState,
 } from "@/lib/engine";
 import type { Dialogue, LearnerState, MomentId, Profile } from "@/lib/types";
 
@@ -208,5 +211,72 @@ describe("engine", () => {
     expect(p).toBeTruthy();
     expect(p.eventTitle).toBe("Café com a Maria");
     expect(p.dialogue.turns.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("records voice/tap turns, dialogueId and targetWord on the interaction", () => {
+    const s = initState(mkProfile("some"));
+    applyResult(
+      s,
+      {
+        target: "v:你好",
+        moment: "cafe",
+        dialogueId: "cafe-coffee",
+        voiceTurns: 2,
+        tapTurns: 1,
+      },
+      "ok",
+      0
+    );
+    const i = s.interactions.at(-1)!;
+    expect(i.voiceTurns).toBe(2);
+    expect(i.tapTurns).toBe(1);
+    expect(i.dialogueId).toBe("cafe-coffee");
+    expect(i.targetWord).toBe("你好");
+  });
+
+  it("wordState maps concept memory to an honest label", () => {
+    const s = initState(mkProfile("hsk1"));
+    const now = Date.now();
+    // not introduced → no state to show
+    const unintroduced = Object.entries(s.concepts).find(([, c]) => !c.intro);
+    if (unintroduced) expect(wordState(unintroduced[1], now)).toBeNull();
+    // brand-new: seen <= 2 → "nova"
+    const fresh = { f: 0.8, stab: 5, ok: 1, fail: 0, help: 0, intro: true, seen: 1, last: now };
+    expect(wordState(fresh, now)).toBe("nova");
+    // decayed: old last + weak stability → "a revisar" beats everything
+    const faded = { f: 0.9, stab: 0.5, ok: 8, fail: 0, help: 0, intro: true, seen: 8, last: now - 10 * 86_400_000 };
+    expect(wordState(faded, now)).toBe("a revisar");
+    // firm: recent + high familiarity
+    const firm = { f: 0.8, stab: 30, ok: 8, fail: 0, help: 0, intro: true, seen: 8, last: now - 86_400_000 };
+    expect(wordState(firm, now)).toBe("firme");
+    // middle ground
+    const learning = { f: 0.3, stab: 30, ok: 3, fail: 2, help: 0, intro: true, seen: 8, last: now - 86_400_000 };
+    expect(wordState(learning, now)).toBe("aprendendo");
+  });
+
+  it("fadingConcepts lists introduced concepts whose memory is escaping", () => {
+    const s = initState(mkProfile("hsk1"));
+    const now = Date.now();
+    // plant one concept that has clearly decayed
+    s.concepts["v:你好"] = { f: 0.8, stab: 0.4, ok: 6, fail: 0, help: 0, intro: true, seen: 6, last: now - 14 * 86_400_000 };
+    const faded = fadingConcepts(s, now);
+    expect(faded).toContain("v:你好");
+    // unintroduced concepts never appear in the fading list
+    expect(faded.every((id) => s.concepts[id]?.intro)).toBe(true);
+  });
+
+  it("stats week strip counts interactions per local day", () => {
+    const s = initState(mkProfile("some"));
+    const today = dayKey(new Date());
+    const twoAgo = dayKey(new Date(Date.now() - 2 * 86_400_000));
+    s.interactions.push(
+      { ts: Date.now(), concept: "v:我", moment: "cafe", result: "ok", type: "dialogue", helpLevel: 0, isNew: false },
+      { ts: Date.now(), concept: "v:你", moment: "noite", result: "ok", type: "dialogue", helpLevel: 0, isNew: false },
+      { ts: Date.now() - 2 * 86_400_000, concept: "v:好", moment: "tarde", result: "ok-help", type: "dialogue", helpLevel: 1, isNew: false }
+    );
+    const wk = stats(s).week;
+    expect(wk.find((d) => d.day === today)?.count).toBe(2);
+    expect(wk.find((d) => d.day === twoAgo)?.count).toBe(1);
+    expect(wk).toHaveLength(7);
   });
 });

@@ -14,6 +14,7 @@ import {
   googleConfigured,
 } from "@/lib/calendar";
 import type { LevelId, SelfConfidence } from "@/lib/types";
+import { loadPrefs, savePrefs, type Prefs } from "@/lib/prefs";
 
 const LEVEL_LABEL: Record<LevelId, string> = {
   beginner: "Estou começando",
@@ -35,14 +36,22 @@ export default function Perfil() {
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState("");
   const [gcal, setGcal] = useState<"off" | "on">("off");
+  const [prefs, setPrefs] = useState<Prefs>({ fontSize: "normal", highContrast: false });
 
   useEffect(() => {
     if (ready && !state.profile) router.replace("/onboarding");
     // returning from Google's OAuth redirect?
-    queueMicrotask(() =>
-      setGcal(gcalConsumeRedirect() || gcalToken() ? "on" : "off")
-    );
+    queueMicrotask(() => {
+      setGcal(gcalConsumeRedirect() || gcalToken() ? "on" : "off");
+      setPrefs(loadPrefs());
+    });
   }, [ready, state.profile, router]);
+
+  const setPref = (patch: Partial<Prefs>) => {
+    const next = { ...prefs, ...patch };
+    setPrefs(next);
+    savePrefs(next);
+  };
 
   if (!ready || !state.profile) return null;
   const p = state.profile;
@@ -165,6 +174,38 @@ export default function Perfil() {
               </div>
             );
           })}
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <p className="text-[1.05rem] font-semibold uppercase tracking-wide text-muted">
+          Aparência
+        </p>
+        <div className="mt-3 space-y-2.5">
+          <button
+            aria-pressed={prefs.fontSize === "grande"}
+            onClick={() => setPref({ fontSize: prefs.fontSize === "grande" ? "normal" : "grande" })}
+            className={`flex min-h-14 w-full items-center justify-between rounded-2xl border-2 px-5 py-3.5 text-left ${
+              prefs.fontSize === "grande" ? "border-accent bg-accent-soft" : "border-line bg-surface"
+            }`}
+          >
+            <span className="text-[1.15rem] font-medium">🔍 Texto maior</span>
+            <span className="text-[0.95rem] text-muted">
+              {prefs.fontSize === "grande" ? "ligado" : "desligado"}
+            </span>
+          </button>
+          <button
+            aria-pressed={prefs.highContrast}
+            onClick={() => setPref({ highContrast: !prefs.highContrast })}
+            className={`flex min-h-14 w-full items-center justify-between rounded-2xl border-2 px-5 py-3.5 text-left ${
+              prefs.highContrast ? "border-accent bg-accent-soft" : "border-line bg-surface"
+            }`}
+          >
+            <span className="text-[1.15rem] font-medium">◐ Alto contraste</span>
+            <span className="text-[0.95rem] text-muted">
+              {prefs.highContrast ? "ligado" : "desligado"}
+            </span>
+          </button>
         </div>
       </section>
 
