@@ -9,7 +9,11 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
 - `npm run build` — production build (fully static)
 - `npm run typecheck` / `npx eslint src tests`
 - `node_modules/.bin/vitest run tests/` — engine unit tests + 7-day simulation
-- `npm run prepare:curriculum` — regenerate `src/data/curriculum.json` from `data/hanflow/`
+  (excludes `tests/e2e/`)
+- `npx playwright test` — e2e smoke suite; needs a dev server already running
+  on the port in `playwright.config.ts` (`reuseExistingServer`)
+- `npm run prepare:curriculum` — regenerate `src/data/curriculum.json` from
+  `data/hanflow/`; validates output and exits 1 on malformed data
 
 ## Environment notes
 
@@ -54,7 +58,19 @@ built on the HanFlow HSK dataset. Next.js 16 (App Router) + TypeScript + Tailwin
   dialogues on any failure.
 - Pages: `/onboarding` (5 steps), `/hoje` (action card + agenda), 
   `/pratica?m=<moment>` or `?e=<agendaItemId>`, `/progresso` (vocab + grammar
-  banks with dominance dots), `/perfil` (Google connect). `/` redirects.
+  banks with dominance dots), `/perfil` (Google connect, magic-link sign-in,
+  reminder opt-in, appearance), `/privacidade` (LGPD page). `/` redirects.
+- `src/lib/telemetry.ts` + `/api/telemetry` — privacy-limited event reporting
+  (names + bounded primitive meta only; no transcripts, audio, names, or
+  calendar content); `/api/dialogue` and `/api/telemetry` are rate-limited
+  via `src/lib/apiGuard.ts`.
+- `src/lib/reminders.ts` — opt-in moment reminders via the Notification API;
+  honest copy: fires only while the app is open (no push backend).
+- PWA: `public/manifest.webmanifest` + `public/sw.js` — prod-only
+  registration (`PrefsBootstrap`), network-first navigations with `/hoje`
+  offline fallback, cache-first hashed assets, `/api/*` never cached.
+- `next.config.ts` — prod-only security headers incl. CSP (Google/Supabase
+  connect-src); disabled in dev so HMR keeps working.
 - Keys live in `.env.local` (gitignored): `OPENAI_API_KEY`, `OPENAI_MODEL`,
   `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (dedicated OAuth client in the `eita-app`
   GCP project; redirect URIs `http://localhost:{3000,3001}/perfil`),

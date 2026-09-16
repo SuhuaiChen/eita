@@ -23,7 +23,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "rate limited" }, { status: 429 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  // legit payloads are ~1KB — refuse big bodies before parsing
+  if (Number(req.headers.get("content-length") ?? 0) > 8192)
+    return NextResponse.json({ error: "too large" }, { status: 413 });
+
+  const body = ((await req.json().catch(() => null)) ?? {}) as Record<
+    string,
+    unknown
+  >;
   const moment = (
     VALID_MOMENTS.has(body.moment as string) ? body.moment : "tarde"
   ) as MomentId;
@@ -52,6 +59,9 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: process.env.OPENAI_MODEL ?? "gpt-5-mini",
         reasoning_effort: "minimal",
+        // a 3-turn micro-dialogue needs <800 tokens — cap so an injected
+        // prompt can't amplify the output-token bill
+        max_completion_tokens: 1200,
         response_format: { type: "json_object" },
         messages: [
           {
@@ -80,11 +90,11 @@ export async function POST(req: NextRequest) {
       }),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok)
-      return NextResponse.json(
-        { error: data?.error?.message ?? `openai ${res.status}` },
-        { status: 502 }
-      );
+    if (!res.ok) {
+      // upstream internals (model name, quota/auth detail) stay in logs only
+      console.error(`[dialogue] openai ${res.status}`, data?.error?.type);
+      return NextResponse.json({ error: "upstream error" }, { status: 502 });
+    }
 
     const raw = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}");
     const turns = sanitizeTurns(raw?.turns);

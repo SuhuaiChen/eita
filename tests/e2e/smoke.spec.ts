@@ -35,14 +35,16 @@ async function seedProfile(page: Page) {
 /** tap through the current dialogue until the recap buttons appear */
 async function runDialogue(page: Page) {
   // up to 6 learner turns; each advances after a tap. Reply buttons carry a
-  // .py-big pinyin span — word chips (also zh-CN) don't, which keeps this
-  // selector from clicking the inline glosses instead.
+  // .py-big pinyin span (choice) or a bare pt label (check) — word chips have
+  // neither, which keeps this selector off the inline glosses.
+  const replySel = page
+    .locator("button:has(.py-big), .border-t.border-line .grid > button")
+    .first();
   for (let i = 0; i < 6; i++) {
     const done = page.getByRole("button", { name: "Por hoje é só" });
     if (await done.isVisible()) return;
-    const reply = page.locator("button:has(.py-big)").first();
-    if (await reply.isVisible({ timeout: 8_000 }).catch(() => false)) {
-      await reply.click();
+    if (await replySel.isVisible({ timeout: 8_000 }).catch(() => false)) {
+      await replySel.click();
     }
     await page.waitForTimeout(900);
     if (await done.isVisible()) return;

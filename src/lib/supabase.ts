@@ -10,16 +10,26 @@ export function getSupabase(): SupabaseClient | null {
   if (client !== undefined) return client;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  client = url && key ? createClient(url, key) : null;
+  try {
+    // createClient throws on a malformed URL — a bad env must degrade to
+    // local-only, not crash the whole app
+    client = url && key ? createClient(url, key) : null;
+  } catch {
+    client = null;
+  }
   return client;
 }
 
 export function deviceId(): string {
   if (typeof window === "undefined") return "ssr";
-  let id = localStorage.getItem("eita:device");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("eita:device", id);
+  try {
+    let id = localStorage.getItem("eita:device");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("eita:device", id);
+    }
+    return id;
+  } catch {
+    return "ephemeral";
   }
-  return id;
 }

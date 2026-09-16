@@ -12,15 +12,29 @@ create table if not exists public.eita_state (
 
 alter table public.eita_state enable row level security;
 
--- anonymous demo mode: device rows are self-service (they carry no identity)
-create policy "anon device rows"
+-- anonymous demo mode: device rows are write-only backups (the app NEVER
+-- selects dev: rows — remote restore only happens for signed-in learners).
+-- No select policy → anon can't dump other devices' profiles/routines.
+drop policy if exists "anon device rows" on public.eita_state;
+create policy "anon device rows write"
   on public.eita_state
-  for all
+  for insert
+  to anon
+  with check (id like 'dev:%');
+create policy "anon device rows update"
+  on public.eita_state
+  for update
   to anon
   using (id like 'dev:%')
   with check (id like 'dev:%');
+create policy "anon device rows delete"
+  on public.eita_state
+  for delete
+  to anon
+  using (id like 'dev:%');
 
 -- signed-in learners can only ever see/write their own row
+drop policy if exists "users own their row" on public.eita_state;
 create policy "users own their row"
   on public.eita_state
   for all
@@ -39,8 +53,23 @@ create table if not exists public.eita_events (
 
 alter table public.eita_events enable row level security;
 
-create policy "anon may append events"
+-- closed allowlist: the anon key is public, so bound what can be appended —
+-- arbitrary event names can't be stuffed through the REST API directly
+drop policy if exists "anon may append events" on public.eita_events;
+create policy "anon may append known events"
   on public.eita_events
   for insert
   to anon
-  with check (true);
+  with check (
+    ev = any ('{
+      "onboarding.complete",
+      "practice.finish",
+      "stt.error",
+      "dialogue.fallback",
+      "gcal.connected",
+      "gcal.disconnect",
+      "gcal.connect.start",
+      "client.error",
+      "client.rejection"
+    }'::text[])
+  );

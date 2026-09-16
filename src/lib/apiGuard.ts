@@ -19,6 +19,9 @@ export function rateLimit(
   windowMs: number
 ): boolean {
   const now = Date.now();
+  // fail-closed for new keys once the map is huge (spoofed-key flood defense —
+  // otherwise each fake IP grows the map by one entry per request)
+  if (!buckets.has(key) && buckets.size > 10_000) return false;
   const b = buckets.get(key) ?? { tokens: limit, at: now };
   // refill proportionally to elapsed time
   b.tokens = Math.min(limit, b.tokens + ((now - b.at) / windowMs) * limit);
@@ -32,11 +35,13 @@ export function rateLimit(
   return true;
 }
 
-/** best-effort client IP from the platform's forwarding headers */
+/** best-effort client IP from the platform's forwarding headers.
+ * On Vercel, x-real-ip is platform-set (trustworthy); the LAST x-forwarded-for
+ * hop is the proxy-appended real client — the leftmost is client-spoofable. */
 export function clientKey(req: Request): string {
   const h = (n: string) => req.headers.get(n) ?? "";
-  const fwd = h("x-forwarded-for").split(",")[0].trim();
-  return fwd || h("x-real-ip") || "anon";
+  const lastXff = h("x-forwarded-for").split(",").pop()?.trim();
+  return h("x-real-ip") || h("x-vercel-forwarded-for") || lastXff || "anon";
 }
 
 // housekeeping: don't let the map grow forever under churn

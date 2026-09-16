@@ -17,6 +17,8 @@ import { onAuth, syncKey } from "./auth";
 const KEY = "eita:state:v1";
 const BAK = "eita:state:v1:bak";
 const AT = "eita:state:at";
+const RESET_AT = "eita:reset:at"; // tombstone: a signed-out reset still blocks remote restore
+const LAST_UID = "eita:lastUid";
 
 const empty: LearnerState = {
   profile: null,
@@ -106,6 +108,9 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
       uidRef.current = uid;
       setUserEmail(session?.user?.email ?? null);
       if (!uid) return;
+      try {
+        localStorage.setItem(LAST_UID, uid);
+      } catch {}
       const sb = getSupabase();
       if (!sb) return;
       (async () => {
@@ -117,25 +122,59 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
             .maybeSingle();
           if (!data?.json) return;
           const remoteAt = new Date(data.updated_at ?? 0).getTime();
+          // a reset tombstone newer than the remote row means the learner
+          // wiped progress while signed out — delete the stale row instead
+          // of resurrecting it
+          const resetAt = Number(localStorage.getItem(RESET_AT)) || 0;
+          if (resetAt && remoteAt <= resetAt) {
+            localStorage.removeItem(RESET_AT);
+            Promise.resolve(
+              sb.from("eita_state").delete().eq("id", syncKey(uid, deviceId()))
+            ).catch(() => {});
+            return;
+          }
           const remote = { ...empty, ...(data.json as LearnerState) };
           if (!valid(remote)) return;
-          // remote wins when it has a profile we lack, or is fresher than our
+          // remote wins when local has no real progress (no profile OR a
+          // fresh onboard with zero interactions — the seeded baseline the
+          // remote snapshot also encodes), or when it's fresher than our
           // last persisted write
           setState((cur) => {
-            const localIsEmpty = !cur.profile;
-            if (localIsEmpty || remoteAt > localUpdatedAt.current) {
-              setRestoredFromRemote(true);
-              try {
-                localStorage.setItem(KEY, JSON.stringify(remote));
-              } catch {}
-              return remote;
+            const localIsEmpty = !cur.profile || cur.interactions.length === 0;
+            if (!localIsEmpty && remoteAt <= localUpdatedAt.current) return cur;
+            // remote wins — stamp AT so later auth events don't re-restore,
+            // and drop any debounced upsert still holding the losing state
+            if (syncTimer.current) {
+              clearTimeout(syncTimer.current);
+              syncTimer.current = null;
             }
-            return cur;
+            try {
+              localStorage.setItem(BAK, JSON.stringify(cur));
+              localStorage.setItem(KEY, JSON.stringify(remote));
+              localUpdatedAt.current = Math.max(remoteAt, Date.now());
+              localStorage.setItem(AT, String(localUpdatedAt.current));
+            } catch {}
+            setRestoredFromRemote(true);
+            return remote;
           });
         } catch {}
       })();
     });
     return off;
+  }, []);
+
+  // multi-tab: keep tabs in sync — another tab's write/reset lands here via
+  // the storage event so divergent states can't fight over the remote row
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key?.startsWith("eita:state") && e.key !== RESET_AT) return;
+      try {
+        localUpdatedAt.current = Number(localStorage.getItem(AT)) || 0;
+      } catch {}
+      setState(load());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const persist = useCallback((s: LearnerState) => {
@@ -192,18 +231,35 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
       syncTimer.current = null;
     }
     setState(empty);
+    localUpdatedAt.current = 0;
     try {
       localStorage.removeItem(KEY);
       localStorage.removeItem(BAK);
+      localStorage.removeItem(AT);
+      // tombstone: if the remote delete can't run (signed out → RLS blocks
+      // u: rows), the next sign-in sees this marker and deletes instead of
+      // restoring the stale snapshot
+      localStorage.setItem(RESET_AT, String(Date.now()));
+      // mid-dialogue resume caches + reminders/pitch flags shouldn't survive
+      sessionStorage.removeItem("eita:resumePractice");
+      sessionStorage.removeItem("eita:resumeThread");
+      localStorage.removeItem("eita:reminders");
+      localStorage.removeItem("eita:agendaPitchSeen");
     } catch {}
     const sb = getSupabase();
     if (sb) {
-      // delete BOTH possible rows — the device row and the account row — so a
-      // sign-in later doesn't resurrect wiped progress
-      const keys = [syncKey(null, deviceId()), uidRef.current ? syncKey(uidRef.current, deviceId()) : null].filter(Boolean) as string[];
+      // delete every row that could hold this learner's state — the device
+      // row plus the current OR last-known account row (a signed-out reset
+      // can't reach u: rows; the tombstone above handles that on next sign-in)
+      const lastUid = uidRef.current ?? localStorage.getItem(LAST_UID);
+      const keys = [
+        syncKey(null, deviceId()),
+        lastUid ? syncKey(lastUid, deviceId()) : null,
+      ].filter(Boolean) as string[];
       try {
         Promise.resolve(sb.from("eita_state").delete().in("id", keys)).catch(() => {});
       } catch {}
+      localStorage.removeItem(LAST_UID);
     }
   }, []);
 

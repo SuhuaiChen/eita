@@ -49,14 +49,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "rate limited" }, { status: 429 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as {
+  const body = ((await req.json().catch(() => null)) ?? {}) as {
     code?: string;
     redirect_uri?: string;
   };
 
   if (body.code) {
-    // initial exchange — the redirect_uri must equal the one used to get the code
-    if (typeof body.redirect_uri !== "string" || body.redirect_uri.length > 200)
+    // real auth codes are ~≤300 chars; reject anything that isn't a plain string
+    if (typeof body.code !== "string" || body.code.length > 2048)
+      return NextResponse.json({ error: "bad code" }, { status: 400 });
+    // the redirect_uri must equal the one used to get the code; Google enforces
+    // this, but constrain to our own path anyway
+    if (
+      typeof body.redirect_uri !== "string" ||
+      body.redirect_uri.length > 200 ||
+      !body.redirect_uri.endsWith("/perfil")
+    )
       return NextResponse.json({ error: "bad redirect_uri" }, { status: 400 });
     const { ok, data } = await tokenRequest({
       code: body.code,
@@ -102,6 +110,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  sweepBuckets();
+  if (!rateLimit(`gcal-del:${clientKey(req)}`, 30, 3_600_000))
+    return NextResponse.json({ error: "rate limited" }, { status: 429 });
   const rt = req.cookies.get(RT_COOKIE)?.value;
   if (rt) {
     // best-effort revoke — don't fail the disconnect on it

@@ -32,24 +32,28 @@ const mkStorage = () => {
   };
 };
 
-let loc: { hash: string; pathname: string; origin: string; hostname: string; port: string };
+let loc: { hash: string; pathname: string; origin: string; hostname: string; port: string; search: string };
 let lstore: ReturnType<typeof mkStorage>;
 let sstore: ReturnType<typeof mkStorage>;
 let replaceState: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  delete process.env.NEXT_PUBLIC_GOOGLE_CODE_FLOW;
+  delete process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
   loc = {
     hash: "",
     pathname: "/perfil",
     origin: "http://localhost:3000",
     hostname: "localhost",
     port: "3000",
+    search: "",
   };
   lstore = mkStorage();
   sstore = mkStorage();
   replaceState = vi.fn((_a: unknown, _b: unknown, url: string) => {
     loc.pathname = url;
     loc.hash = "";
+    loc.search = "";
   });
   vi.stubGlobal("window", { location: loc });
   vi.stubGlobal("localStorage", lstore);
@@ -118,6 +122,34 @@ describe("gcal token lifecycle", () => {
     loc.hash = "#access_token=tok123&state=other";
     expect(await gcalConsumeRedirect()).toBe(false);
     expect(gcalToken()).toBeNull();
+  });
+
+  it("rejects a response with no stored state on a non-local origin", async () => {
+    // forced-connection attempt: attacker-crafted URL opened on the real
+    // domain with empty sessionStorage must not connect anything
+    loc.hostname = "eita.app";
+    loc.origin = "https://eita.app";
+    loc.port = "";
+    loc.hash = "#access_token=tok123&state=whatever";
+    expect(await gcalConsumeRedirect()).toBe(false);
+    expect(gcalToken()).toBeNull();
+    loc.search = "?code=authcode&state=whatever";
+    expect(await gcalConsumeRedirect()).toBe(false);
+  });
+
+  it("still consumes a state-less response on localhost (LAN dev path)", async () => {
+    loc.hash = "#access_token=tok123&state=whatever";
+    expect(await gcalConsumeRedirect()).toBe(true);
+    expect(gcalToken()?.token).toBe("tok123");
+  });
+
+  it("strips a bad ?code= from the URL", async () => {
+    loc.hostname = "eita.app";
+    loc.origin = "https://eita.app";
+    loc.port = "";
+    loc.search = "?code=authcode&state=whatever";
+    await gcalConsumeRedirect();
+    expect(loc.search).toBe("");
   });
 
   it("cleans the hash and stays disconnected on error=access_denied", async () => {

@@ -58,11 +58,18 @@ export default function Hoje() {
   );
 
   // opt-in nudge when a moment window opens — only while the app is open
-  // (the honest scope of browser notifications without a push server)
+  // (the honest scope of browser notifications without a push server).
+  // Don't nudge for a moment already practiced today or while the learner is
+  // already looking at the page.
   useEffect(() => {
-    if (cm?.status === "now" && state.profile)
+    if (
+      cm?.status === "now" &&
+      state.profile &&
+      !state.dailyDone[dayKey(now)]?.includes(cm.id) &&
+      document.visibilityState !== "visible"
+    )
       maybeNotify(momentById(cm.id)?.label ?? "", cm.id, dayKey(now));
-  }, [cm, state.profile, now]);
+  }, [cm, state.profile, state.dailyDone, now]);
 
   // refetch the agenda at most every ~2min (ticks alone shouldn't hammer the
   // Google API), not on every render

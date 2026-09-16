@@ -9,42 +9,75 @@ export function notificationsSupported(): boolean {
 }
 
 export function remindersOn(): boolean {
-  return (
-    notificationsSupported() &&
-    localStorage.getItem("eita:reminders") === "1" &&
-    Notification.permission === "granted"
-  );
+  try {
+    return (
+      notificationsSupported() &&
+      localStorage.getItem("eita:reminders") === "1" &&
+      Notification.permission === "granted"
+    );
+  } catch {
+    return false;
+  }
 }
 
 export async function enableReminders(): Promise<boolean> {
   if (!notificationsSupported()) return false;
   const p = await Notification.requestPermission();
   if (p !== "granted") return false;
-  localStorage.setItem("eita:reminders", "1");
+  try {
+    localStorage.setItem("eita:reminders", "1");
+  } catch {}
   return true;
 }
 
 export function disableReminders() {
-  localStorage.removeItem("eita:reminders");
+  try {
+    localStorage.removeItem("eita:reminders");
+  } catch {}
 }
 
 // fires once per moment per day — the marker lives in sessionStorage so a new
 // browser session can remind again (it's a nudge, not a lock)
-const fired = new Set<string>();
+const FIRED_KEY = "eita:reminded";
+
+function alreadyFired(key: string): boolean {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(FIRED_KEY) ?? "[]") as string[];
+    return s.includes(key);
+  } catch {
+    return false;
+  }
+}
+
+function markFired(key: string) {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(FIRED_KEY) ?? "[]") as string[];
+    sessionStorage.setItem(FIRED_KEY, JSON.stringify([...s.slice(-20), key]));
+  } catch {}
+}
 
 export function maybeNotify(momentLabel: string, momentId: string, day: string) {
   if (!remindersOn()) return;
   const key = `${day}:${momentId}`;
-  if (fired.has(key)) return;
-  fired.add(key);
+  if (alreadyFired(key)) return;
+  const title = "Hora da sua conversinha ☀️";
+  const opts = {
+    body: `${momentLabel} — menos de um minuto, no seu ritmo.`,
+    icon: "/icon-192.png",
+    tag: key, // same tag replaces rather than stacks
+  };
   try {
-    new Notification("Hora da sua conversinha ☀️", {
-      body: `${momentLabel} — menos de um minuto, no seu ritmo.`,
-      icon: "/icon-192.png",
-      tag: key,
-    });
+    new Notification(title, opts);
+    markFired(key);
+    return;
   } catch {
-    // some browsers require a service worker for notifications — in that
-    // case the in-app card already does the nudging, so we just skip
+    // iOS/Safari PWA: the constructor throws — notifications must go through
+    // the service worker registration instead
+  }
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.ready
+      .then((reg) => reg.showNotification(title, opts))
+      .then(() => markFired(key))
+      .catch(() => {});
   }
 }

@@ -27,10 +27,13 @@ export default function Privacidade() {
           </p>
         </section>
         <section className="rounded-2xl bg-surface p-5 shadow-[0_4px_20px_rgba(60,40,20,0.06)]">
-          <h2 className="font-semibold">🎤 Sua voz nunca sai do aparelho</h2>
+          <h2 className="font-semibold">🎤 Sua voz</h2>
           <p className="mt-1.5 text-muted">
-            O reconhecimento e a gravação de voz acontecem no seu navegador.
-            Nenhum áudio é enviado ou guardado nos nossos servidores.
+            O reconhecimento de voz usa o serviço do próprio navegador (no
+            Chrome, o áudio vai para o Google para ser transcrito; em outros
+            navegadores pode ficar no aparelho). O Eita não recebe, envia nem
+            guarda seu áudio nos nossos servidores — a gravação para você
+            ouvir sua própria voz fica só no aparelho.
           </p>
         </section>
         <section className="rounded-2xl bg-surface p-5 shadow-[0_4px_20px_rgba(60,40,20,0.06)]">
@@ -45,9 +48,18 @@ export default function Privacidade() {
         <section className="rounded-2xl bg-surface p-5 shadow-[0_4px_20px_rgba(60,40,20,0.06)]">
           <h2 className="font-semibold">🤖 Conversas personalizadas</h2>
           <p className="mt-1.5 text-muted">
-            Para criar uma conversinha de compromisso, enviamos à IA apenas o
-            título do evento, o momento do dia e palavras que você já conhece —
-            nunca seu e-mail nem dados de contato.
+            Para criar uma conversinha de compromisso, enviamos à IA o título
+            do evento, o horário, o momento do dia, seu nome de tratamento e
+            palavras que você já conhece — nunca seu e-mail nem dados de
+            contato.
+          </p>
+        </section>
+        <section className="rounded-2xl bg-surface p-5 shadow-[0_4px_20px_rgba(60,40,20,0.06)]">
+          <h2 className="font-semibold">📊 Estatísticas de uso</h2>
+          <p className="mt-1.5 text-muted">
+            Guardamos contagens anônimas (por exemplo, “conversinha concluída”)
+            para melhorar o app — nunca o conteúdo das conversas, da sua voz
+            ou da sua agenda.
           </p>
         </section>
         <section className="rounded-2xl bg-surface p-5 shadow-[0_4px_20px_rgba(60,40,20,0.06)]">

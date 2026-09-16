@@ -47,7 +47,7 @@ export default function Perfil() {
   const [gcal, setGcal] = useState<"off" | "on">("off");
   const [prefs, setPrefs] = useState<Prefs>({ fontSize: "normal", highContrast: false });
   const [email, setEmail] = useState("");
-  const [linkSent, setLinkSent] = useState<null | "sent" | "err">(null);
+  const [linkSent, setLinkSent] = useState<null | "sent" | "err" | "expired">(null);
   const [remind, setRemind] = useState(false);
 
   useEffect(() => {
@@ -59,6 +59,13 @@ export default function Perfil() {
       if (back) track("gcal.connected");
       setPrefs(loadPrefs());
       setRemind(remindersOn());
+      // a magic link that landed expired/used arrives as #error=… — the SDK
+      // swallows it, so surface it ourselves in warm copy
+      if (window.location.hash.includes("error")) {
+        const hp = new URLSearchParams(window.location.hash.slice(1));
+        if (hp.get("error_code") || hp.get("error")) setLinkSent("expired");
+        history.replaceState(null, "", window.location.pathname);
+      }
     });
   }, [ready, state.profile, router]);
 
@@ -239,8 +246,12 @@ export default function Perfil() {
                     className="!w-auto shrink-0 px-5"
                     disabled={!/^\S+@\S+\.\S+$/.test(email)}
                     onClick={async () => {
-                      const err = await sendMagicLink(email.trim());
-                      setLinkSent(err ? "err" : "sent");
+                      try {
+                        const err = await sendMagicLink(email.trim());
+                        setLinkSent(err ? "err" : "sent");
+                      } catch {
+                        setLinkSent("err");
+                      }
                     }}
                   >
                     Entrar
@@ -249,6 +260,11 @@ export default function Perfil() {
                 {linkSent === "err" && (
                   <p className="mt-2 text-[0.95rem] text-hint">
                     Não conseguimos enviar o link — confira o e-mail e tente de novo.
+                  </p>
+                )}
+                {linkSent === "expired" && (
+                  <p className="mt-2 text-[0.95rem] text-hint">
+                    Esse link expirou — peça um novo aqui embaixo.
                   </p>
                 )}
               </>
@@ -317,6 +333,12 @@ export default function Perfil() {
               Avisa quando chega a hora de uma conversinha, enquanto o app estiver
               aberto no aparelho. Sem e-mails nem mensagens.
             </p>
+            {!remind && Notification.permission === "denied" && (
+              <p className="px-1 text-[0.9rem] text-hint">
+                O navegador bloqueou os avisos — para ligar, permita notificações
+                nas configurações do aparelho e volte aqui.
+              </p>
+            )}
           </div>
         </section>
       )}

@@ -575,6 +575,9 @@ export function pickEventPractice(
   if (dialogue && target && !scriptMatches(dialogue, target)) {
     target = dialogue.targets[0];
   }
+  // a scripted dialogue with no due-target still gets credit for its first
+  // declared target — otherwise a valid event dialogue dead-ends to null
+  target ??= dialogue?.targets[0] ?? null;
   if (!dialogue) {
     target ??= pickDueList(state, ev.moment, now, 5)[0]?.id ?? null;
     target ??= pickNewConcept(state, ev.moment);

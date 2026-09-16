@@ -9,12 +9,24 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`tel:${clientKey(req)}`, 120, 3_600_000)) {
     return NextResponse.json({ ok: false }, { status: 429 });
   }
-  const body = (await req.json().catch(() => ({}))) as {
+  const body = ((await req.json().catch(() => null)) ?? {}) as {
     ev?: string;
     meta?: Record<string, unknown>;
   };
   const ev = typeof body.ev === "string" ? body.ev.slice(0, 60) : "";
-  if (!ev || !/^[a-z0-9._-]+$/i.test(ev)) {
+  // closed event-name set — the endpoint is a junk-write relay otherwise
+  const ALLOWED = new Set([
+    "onboarding.complete",
+    "practice.finish",
+    "stt.error",
+    "dialogue.fallback",
+    "gcal.connected",
+    "gcal.disconnect",
+    "gcal.connect.start",
+    "client.error",
+    "client.rejection",
+  ]);
+  if (!ev || !/^[a-z0-9._-]+$/i.test(ev) || !ALLOWED.has(ev)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
   // bound metadata: keys+values short, no nesting

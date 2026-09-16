@@ -1,7 +1,7 @@
 // Agenda model — Google Calendar when connected, a built-in demo agenda
 // otherwise. Each event can spawn a micro-dialogue ~1h before it starts.
 import type { MomentId, Profile, TopicId } from "./types";
-import { dayKey, momentById } from "./engine";
+import { dayKey } from "./engine";
 
 export interface AgendaItem {
   id: string;
@@ -134,10 +134,40 @@ export function gcalToken(): { token: string; exp: number } | null {
 }
 
 function storeAccessToken(token: string, ttlSec: number) {
-  localStorage.setItem(
-    GCAL_TOKEN_KEY,
-    JSON.stringify({ token, exp: Date.now() + ttlSec * 1000 })
-  );
+  try {
+    localStorage.setItem(
+      GCAL_TOKEN_KEY,
+      JSON.stringify({ token, exp: Date.now() + ttlSec * 1000 })
+    );
+  } catch {}
+}
+
+/** shared in-flight refresh so concurrent agenda calls don't double-POST */
+let refreshP: Promise<string | null> | null = null;
+
+function doRefresh(): Promise<string | null> {
+  refreshP ??= (async () => {
+    const res = await fetch("/api/gcal/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(10_000),
+    }).catch(() => null);
+    if (!res?.ok) {
+      if (res?.status === 401) gcalDisconnect();
+      return null;
+    }
+    const data = (await res.json().catch(() => null)) as {
+      access_token?: string;
+      expires_in?: number;
+    } | null;
+    if (!data?.access_token) return null;
+    storeAccessToken(data.access_token, data.expires_in ?? 3600);
+    return data.access_token;
+  })().finally(() => {
+    refreshP = null;
+  });
+  return refreshP;
 }
 
 /** a usable access token — refreshes via the httpOnly cookie when expired */
@@ -145,31 +175,42 @@ export async function gcalAccessToken(): Promise<string | null> {
   const t = gcalToken();
   if (t) return t.token;
   if (!gcalCodeFlow() || localStorage.getItem(GCAL_LINKED_KEY) !== "1") return null;
-  const res = await fetch("/api/gcal/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-  }).catch(() => null);
-  if (!res?.ok) {
-    if (res?.status === 401) gcalDisconnect();
-    return null;
-  }
-  const data = (await res.json().catch(() => null)) as {
-    access_token?: string;
-    expires_in?: number;
-  } | null;
-  if (!data?.access_token) return null;
-  storeAccessToken(data.access_token, data.expires_in ?? 3600);
-  return data.access_token;
+  return doRefresh();
 }
 
 export function gcalDisconnect() {
   localStorage.removeItem(GCAL_TOKEN_KEY);
   localStorage.removeItem(GCAL_LINKED_KEY);
   if (gcalCodeFlow()) {
-    // revoke the refresh cookie server-side — best effort
-    fetch("/api/gcal/token", { method: "DELETE" }).catch(() => {});
+    // revoke the refresh cookie server-side — best effort; keepalive so a tab
+    // closing right after the click doesn't orphan the grant
+    fetch("/api/gcal/token", { method: "DELETE", keepalive: true }).catch(() => {});
   }
+}
+
+/** localhost / LAN / *.local hosts — where the state check can't round-trip
+ * because the connect URL normalizes the origin to localhost */
+function isLocalOrigin(): boolean {
+  const h = window.location.hostname;
+  return (
+    h === "localhost" ||
+    h === "::1" ||
+    h.endsWith(".local") ||
+    /^\d+\.\d+\.\d+\.\d+$/.test(h)
+  );
+}
+
+/** true → consume the response; false → reject it. On non-local origins the
+ * state MUST round-trip — otherwise a crafted `?code=` link would connect the
+ * victim to an attacker's calendar. */
+function stateOk(state: string | null): boolean {
+  let expected: string | null = null;
+  try {
+    expected = sessionStorage.getItem(GCAL_STATE_KEY);
+  } catch {}
+  sessionStorage.removeItem(GCAL_STATE_KEY);
+  if (!expected) return isLocalOrigin();
+  return state === expected;
 }
 
 /** consume the OAuth redirect back on /perfil — code or implicit hash */
@@ -180,12 +221,10 @@ export async function gcalConsumeRedirect(): Promise<boolean> {
   const qp = new URLSearchParams(window.location.search);
   const code = qp.get("code");
   if (code) {
-    const expected = sessionStorage.getItem(GCAL_STATE_KEY);
-    if (expected && qp.get("state") !== expected) {
+    if (!stateOk(qp.get("state"))) {
       history.replaceState(null, "", window.location.pathname);
       return false;
     }
-    sessionStorage.removeItem(GCAL_STATE_KEY);
     history.replaceState(null, "", window.location.pathname);
     const res = await fetch("/api/gcal/token", {
       method: "POST",
@@ -218,15 +257,13 @@ export async function gcalConsumeRedirect(): Promise<boolean> {
   const error = p.get("error");
   if (!token && !error) return false;
   // the state we sent must round-trip — ignore foreign/injected responses
-  const expected = sessionStorage.getItem(GCAL_STATE_KEY);
-  if (expected && p.get("state") !== expected) {
+  if (!stateOk(p.get("state"))) {
     history.replaceState(null, "", window.location.pathname);
     return false;
   }
-  sessionStorage.removeItem(GCAL_STATE_KEY);
   history.replaceState(null, "", window.location.pathname);
   if (!token) return false;
-  storeAccessToken(token, Number(p.get("expires_in") ?? 3600));
+  storeAccessToken(token, Number(p.get("expires_in")) || 3600);
   return true;
 }
 
@@ -244,8 +281,13 @@ export function gcalConnectUrl(): string {
     /^\d+\.\d+\.\d+\.\d+$/.test(host);
   const origin = isLocal ? `http://localhost${l.port ? `:${l.port}` : ""}` : l.origin;
   const redirect = `${origin}/perfil`;
-  const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  sessionStorage.setItem(GCAL_STATE_KEY, state);
+  const state =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2) + Date.now().toString(36);
+  try {
+    sessionStorage.setItem(GCAL_STATE_KEY, state);
+  } catch {}
   const q = new URLSearchParams({
     client_id: cid,
     redirect_uri: redirect,
@@ -324,7 +366,25 @@ export async function getAgenda(
       // a revoked token should drop the connection; a flaky network
       // shouldn't — keep the link and just show the demo agenda this render
       const status = (err as { status?: number }).status;
-      if ((status === 401 || status === 403) && !gcalCodeFlow()) gcalDisconnect();
+      if (status === 401 || status === 403) {
+        if (!gcalCodeFlow()) {
+          gcalDisconnect();
+        } else {
+          // the stored token may be revoked remotely while still unexpired —
+          // drop it and try one refresh before giving up on the real agenda
+          localStorage.removeItem(GCAL_TOKEN_KEY);
+          const t2 = await doRefresh();
+          if (t2) {
+            try {
+              const items = await fetchGoogleEvents(t2, now);
+              return {
+                items: items.sort((a, b) => a.start.getTime() - b.start.getTime()),
+                source: "google",
+              };
+            } catch {}
+          }
+        }
+      }
     }
   }
   return { items: demoAgenda(now), source: "demo" };
@@ -336,22 +396,3 @@ export function isLive(item: AgendaItem, now: Date): boolean {
   return ms <= 75 * 60_000 && ms > -10 * 60_000;
 }
 
-export function routineItems(profile: Profile, now: Date): AgendaItem[] {
-  return profile.moments
-    .filter((m) => m.enabled)
-    .map((m) => {
-      const meta = momentById(m.id);
-      const [h, mi] = m.time.split(":").map(Number);
-      const at = new Date(now);
-      at.setHours(h, mi, 0, 0);
-      return {
-        id: `r:${m.id}`,
-        title: meta.label,
-        start: at,
-        source: "routine" as const,
-        topic: "cotidiano" as TopicId,
-        moment: m.id,
-        emoji: meta.emoji,
-      };
-    });
-}

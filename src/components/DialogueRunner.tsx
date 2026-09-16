@@ -225,7 +225,14 @@ export default function DialogueRunner({
     const r = clipRef.current;
     clipRef.current = null;
     if (!r) return;
-    if (save) r.stop().then((url) => url && setVoiceClip(url));
+    if (save)
+      r.stop().then((url) => {
+        if (!url) return;
+        setVoiceClip((prev) => {
+          if (prev) URL.revokeObjectURL(prev);
+          return url;
+        });
+      });
     else r.cancel();
   }
 
@@ -279,6 +286,7 @@ export default function DialogueRunner({
   /** voice-first reply: match the transcript against this turn's options */
   function startListening() {
     if (current?.role !== "learner" || listening) return;
+    stopSpeak(); // the mic must not hear Eita's model line and self-match
     setTranscript("");
     lastInterim.current = "";
     scoredFinal.current = false;
@@ -330,6 +338,7 @@ export default function DialogueRunner({
 
   function startRehearse(l: Rendered) {
     if (listening || rehearse?.listening) return;
+    stopSpeak();
     const reply: ReplyOption = { zh: l.zh, py: l.py ?? "", pt: l.pt ?? "", words: l.words ?? [] };
     setRehearse({ key: l.key, listening: true });
     armClip();
@@ -337,7 +346,7 @@ export default function DialogueRunner({
       onResult: ({ transcript: t, final, alts }) => {
         if (!final) return;
         rehearseRecRef.current = null;
-        endClip(true);
+        endClip(false); // rehearsal takes are discarded — nothing displays them
         const cands = alts?.length ? alts : [t];
         const m = cands.some((c) => matchesReply(c, reply) === "ok")
           ? "ok"
@@ -353,17 +362,26 @@ export default function DialogueRunner({
           setRehearse({ key: l.key, listening: false, msg: "Não captei bem — tente de novo." });
         }
       },
-      onEnd: () => setRehearse((r) => (r?.listening ? { ...r, listening: false } : r)),
-      onError: () =>
-        setRehearse({ key: l.key, listening: false, msg: "Não consegui ouvir — toque de novo quando quiser." }),
+      onEnd: () => {
+        endClip(false);
+        setRehearse((r) => (r?.listening ? { ...r, listening: false } : r));
+      },
+      onError: () => {
+        endClip(false);
+        setRehearse({ key: l.key, listening: false, msg: "Não consegui ouvir — toque de novo quando quiser." });
+      },
     });
-    if (!handle) setRehearse({ key: l.key, listening: false, msg: "Voz indisponível neste aparelho." });
+    if (!handle) {
+      endClip(false);
+      setRehearse({ key: l.key, listening: false, msg: "Voz indisponível neste aparelho." });
+    }
     else rehearseRecRef.current = handle;
   }
 
   function stopRehearse() {
     rehearseRecRef.current?.stop();
     rehearseRecRef.current = null;
+    endClip(false);
     setRehearse((r) => (r ? { ...r, listening: false } : r));
   }
 
@@ -631,7 +649,7 @@ export default function DialogueRunner({
                   )}
                 </div>
                 {rehearse?.key === l.key && (
-                  <p aria-live="polite" className={`mt-1.5 text-[1rem] font-medium ${rehearse.listening ? "text-muted" : rehearse.good ? "text-jade" : "text-hint"}`}>
+                  <p className={`mt-1.5 text-[1rem] font-medium ${rehearse.listening ? "text-muted" : rehearse.good ? "text-jade" : "text-hint"}`}>
                     {rehearse.listening ? "Sua vez — repita a frase…" : rehearse.msg}
                   </p>
                 )}
@@ -803,7 +821,7 @@ export default function DialogueRunner({
               <input
                 value={typed}
                 onChange={(e) => setTyped(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && typed.trim() && checkTyped()}
+                onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && typed.trim() && checkTyped()}
                 placeholder="Escreva em chinês ou pinyin…"
                 lang="zh-CN"
                 autoCapitalize="off"

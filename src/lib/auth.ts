@@ -39,7 +39,8 @@ export function onAuth(cb: (session: Session | null) => void): () => void {
 export async function signOut(): Promise<void> {
   const sb = getSupabase();
   if (!sb) return;
-  await sb.auth.signOut().catch(() => {});
+  // local scope — signing out here shouldn't kick the learner off other devices
+  await sb.auth.signOut({ scope: "local" }).catch(() => {});
 }
 
 /** the eita_state row key: user id when signed in, device id otherwise */

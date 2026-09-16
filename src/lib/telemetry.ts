@@ -4,8 +4,19 @@
 // transcripts, names, or calendar content. Uses sendBeacon so it doesn't
 // block or throw for the learner.
 
+// client-side throttle — a render-loop error shouldn't beacon-storm
+let sent = 0;
+let windowStart = Date.now();
+const MAX_PER_MIN = 60;
+
 export function track(ev: string, meta?: Record<string, string | number | boolean>) {
   try {
+    const now = Date.now();
+    if (now - windowStart > 60_000) {
+      windowStart = now;
+      sent = 0;
+    }
+    if (sent++ >= MAX_PER_MIN) return;
     const body = JSON.stringify({ ev, meta });
     if (navigator.sendBeacon) {
       navigator.sendBeacon("/api/telemetry", new Blob([body], { type: "application/json" }));

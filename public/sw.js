@@ -3,12 +3,26 @@
 // /_next/static assets are content-hashed and safe to cache forever.
 // API calls and cross-origin requests always go to the network.
 
-const CACHE = "eita-v1";
-const SHELL = ["/", "/hoje", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
+const CACHE = "eita-v2";
+const SHELL = [
+  "/",
+  "/hoje",
+  "/onboarding",
+  "/perfil",
+  "/progresso",
+  "/privacidade",
+  "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE)
+      // each precache is independent — one failed URL must not kill install
+      .then((c) => Promise.allSettled(SHELL.map((u) => c.add(u))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -33,8 +47,11 @@ self.addEventListener("fetch", (e) => {
         (hit) =>
           hit ??
           fetch(e.request).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(e.request, copy));
+            // only cache good responses — never 404s/redirects/opaque
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(e.request, copy));
+            }
             return res;
           })
       )
@@ -47,12 +64,17 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
           return res;
         })
         .catch(() =>
-          caches.match(e.request).then((r) => r ?? caches.match("/hoje"))
+          caches
+            .match(e.request)
+            .then((r) => r ?? caches.match("/hoje"))
+            .then((r) => r ?? Response.error())
         )
     );
   }

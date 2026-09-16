@@ -253,6 +253,15 @@ for (const [w, pt] of Object.entries(PT_FIX)) {
   const e = lexicon.get(w);
   if (e && !(e.pt || "").trim()) e.pt = pt;
 }
+// multi-char words missing from the dataset — without these the segmenter
+// emits bare unglossed chars (晚+安 → "安" with no meaning)
+const LEX_ADD = {
+  晚安: { p: "wǎn'ān", pt: "boa noite" },
+  早上好: { p: "zǎoshang hǎo", pt: "bom dia" },
+  圣保罗: { p: "shèngbǎoluó", pt: "São Paulo" },
+  主意: { p: "zhǔyi", pt: "ideia" },
+};
+for (const [w, e] of Object.entries(LEX_ADD)) if (!lexicon.has(w)) lexicon.set(w, e);
 
 // ---------- segmentation ---------------------------------------------------
 
@@ -641,10 +650,15 @@ for (const v of vocab) {
   if (!v.id || !v.w || !v.p) errors.push(`vocab ${v.id}: missing id/w/p`);
   if (!v.pt?.trim()) errors.push(`vocab ${v.w}: empty Portuguese gloss`);
 }
+const glossed = (w) => {
+  const e = lexicon.get(w);
+  return vocabIds.has(`v:${w}`) || (e && (e.pt || "").trim());
+};
+
 for (const s of momentSentences) {
   if (!s.hz || !s.words?.length) errors.push(`sentence ${s.hz}: no segmentation`);
   for (const w of s.words)
-    if (!vocabIds.has(`v:${w}`) && !lexicon.get(w)) errors.push(`sentence ${s.hz}: unglossed word "${w}"`);
+    if (!glossed(w)) errors.push(`sentence ${s.hz}: unglossed word "${w}"`);
 }
 const dlgIds = new Set();
 for (const d of dialogues) {
@@ -655,6 +669,14 @@ for (const d of dialogues) {
     if (t.role === "eita" && (!t.zh || !t.pt)) errors.push(`dialogue ${d.id}: eita line missing zh/pt`);
     if (t.role === "learner" && (!t.replies?.length || t.replies.length < 2))
       errors.push(`dialogue ${d.id}: learner turn needs ≥2 replies`);
+    // every word chip and reply needs a non-empty gloss — the UI shows "—" otherwise
+    for (const w of t.words ?? [])
+      if (!glossed(w)) errors.push(`dialogue ${d.id}: unglossed word "${w}"`);
+    for (const r of t.replies ?? []) {
+      if (!r.zh || !r.pt) errors.push(`dialogue ${d.id}: reply missing zh/pt`);
+      for (const w of r.words ?? [])
+        if (!glossed(w)) errors.push(`dialogue ${d.id}: unglossed reply word "${w}"`);
+    }
   }
 }
 if (errors.length) {
